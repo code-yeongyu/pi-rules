@@ -1,0 +1,18 @@
+pi-rules
+
+This package implements rule/context loading for the pi coding-agent extension ecosystem.
+Its behavior is inspired by oh-my-openagent (omo) at
+https://github.com/code-yeongyu/oh-my-openagent, including omo's `.sisyphus/rules/`
+workflow and the rules-injector hook architecture. omo is originally licensed under
+the Sustainable Use License 1.0.
+
+Yeongyu Kim (https://github.com/code-yeongyu), author of omo and this package,
+licenses the source distributed in this repository under the MIT License. If any
+source was ported from omo, that ported source is re-licensed here under MIT for
+distribution as a pi-coding-agent extension. See LICENSE for terms.
+
+The pi-coding-agent host is by Mario Zechner (https://github.com/badlogic/pi-mono).
+Distributed under the MIT License.
+
+picomatch is by Jon Schlinkert and contributors (https://github.com/micromatch/picomatch).
+Distributed under the MIT License.
