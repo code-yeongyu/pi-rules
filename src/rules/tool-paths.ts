@@ -1,0 +1,50 @@
+import { isAbsolute, resolve } from "node:path";
+
+import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
+
+import { TRACKED_BUILTIN_TOOLS } from "./constants.js";
+
+export function isTrackedTool(toolName: string): boolean {
+	return TRACKED_BUILTIN_TOOLS.includes(toolName);
+}
+
+export function extractToolPaths(event: ToolResultEvent): string[] {
+	if (event.isError || !isTrackedTool(event.toolName)) {
+		return [];
+	}
+
+	const filePaths = new Set<string>();
+
+	if (event.toolName === "read" || event.toolName === "edit") {
+		addPath(filePaths, getStringProperty(event.details, "filePath"));
+		addPath(filePaths, getStringProperty(event.input, "path"));
+	}
+
+	if (event.toolName === "write") {
+		addPath(filePaths, getStringProperty(event.input, "filePath"));
+		addPath(filePaths, getStringProperty(event.input, "path"));
+	}
+
+	return [...filePaths];
+}
+
+function addPath(filePaths: Set<string>, filePath: string | undefined): void {
+	if (filePath === undefined || filePath.length === 0) {
+		return;
+	}
+
+	filePaths.add(isAbsolute(filePath) ? filePath : resolve(filePath));
+}
+
+function getStringProperty(value: unknown, propertyName: string): string | undefined {
+	if (!isRecord(value)) {
+		return undefined;
+	}
+
+	const propertyValue = value[propertyName];
+	return typeof propertyValue === "string" ? propertyValue : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}

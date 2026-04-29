@@ -60,7 +60,10 @@ describe("extractToolPaths", () => {
 
 	it("#given tool with isError=true #when extracting #then returns []", () => {
 		// given
-		const event = toolResultEvent("read", { details: { filePath: "/tmp/project/src/read-target.ts" }, isError: true });
+		const event = toolResultEvent("read", {
+			details: { filePath: "/tmp/project/src/read-target.ts" },
+			isError: true,
+		});
 
 		// when
 		const paths = extractToolPaths(event);
