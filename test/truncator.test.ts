@@ -110,7 +110,7 @@ describe("truncateRule", () => {
 
 	it("#given multibyte unicode body #when truncating #then result is valid UTF-16 string", () => {
 		// given
-		const body = "😀".repeat(20);
+		const body = "😀".repeat(80);
 		const notice = noticeFor(relativePath);
 		const maxChars = notice.length + 9;
 
