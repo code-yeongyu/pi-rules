@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
+import { registerSlashCommands } from "./commands.js";
 import { createEngine, defaultConfig } from "./rules/engine.js";
 import { findRuleCandidates } from "./rules/finder.js";
 import { findProjectRoot } from "./rules/project-root.js";
@@ -42,6 +43,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		findProjectRoot,
 		extractToolPaths,
 	});
+	registerSlashCommands(pi, engine);
 
 	function syncConfigFromFlags(): void {
 		const disabled = pi.getFlag("pi-rules-disabled");
