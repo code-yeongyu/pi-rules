@@ -1,0 +1,59 @@
+name: Bug Report
+description: Report broken rule loading, context injection, or TUI behavior
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keep this concise. Include the rule files and pi command needed to reproduce.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include exact output/errors.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal repo layout and command.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: pi-rules version
+      placeholder: 0.1.0
+    validations:
+      required: false
+
+  - type: input
+    id: pi-version
+    attributes:
+      label: pi-coding-agent version
+      placeholder: 0.70.6
+    validations:
+      required: false
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: false
