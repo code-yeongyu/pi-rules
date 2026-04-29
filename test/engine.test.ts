@@ -46,6 +46,18 @@ function createDeps(candidates: RuleCandidate[], files: ReadonlyMap<string, stri
 	};
 }
 
+function createDepsForTargets(
+	candidatesByTarget: ReadonlyMap<string | null, RuleCandidate[]>,
+	files: ReadonlyMap<string, string | null>,
+): EngineDeps {
+	return {
+		findCandidates: ({ targetFile }) => candidatesByTarget.get(targetFile) ?? [],
+		readFile: (path) => files.get(path) ?? null,
+		findProjectRoot: () => PROJECT_ROOT,
+		extractToolPaths: () => [],
+	};
+}
+
 function createTestEngine(
 	overrides: Partial<PiRulesConfig>,
 	candidates: RuleCandidate[],
@@ -280,6 +292,31 @@ describe("loadStaticRules", () => {
 		});
 		expect(result.rules.map((rule) => rule.path)).toContain(valid.path);
 	});
+
+	it("#given project rule realPath escapes project root #when loadStaticRules #then skipped before readFile", () => {
+		// given
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.sisyphus/rules/leak.md`,
+			realPath: "/Users/example/.ssh/id_rsa",
+			relativePath: ".sisyphus/rules/leak.md",
+		});
+		const engine = createTestEngine(
+			{},
+			[candidate],
+			new Map([[candidate.path, ruleMarkdown("alwaysApply: true", "secret")]]),
+		);
+
+		// when
+		const result = engine.loadStaticRules(PROJECT_ROOT);
+
+		// then
+		expect(result.rules).toEqual([]);
+		expect(result.diagnostics).toContainEqual({
+			severity: "warning",
+			source: candidate.path,
+			message: "Rule file resolves outside project root",
+		});
+	});
 });
 
 describe("loadDynamicRules", () => {
@@ -387,6 +424,28 @@ describe("loadDynamicRules", () => {
 			".sisyphus/rules/root.md",
 		]);
 	});
+
+	it("#given same dynamic rule matches multiple target files #when loadDynamicRules #then rule returned once", () => {
+		// given
+		const firstTarget = `${PROJECT_ROOT}/src/first.ts`;
+		const secondTarget = `${PROJECT_ROOT}/src/second.ts`;
+		const candidate = makeCandidate();
+		const deps = createDepsForTargets(
+			new Map([
+				[firstTarget, [candidate]],
+				[secondTarget, [candidate]],
+			]),
+			new Map([[candidate.path, ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule.")]]),
+		);
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const result = engine.loadDynamicRules(PROJECT_ROOT, [firstTarget, secondTarget]);
+
+		// then
+		expect(result.rules).toHaveLength(1);
+		expect(result.rules[0]?.path).toBe(candidate.path);
+	});
 });
 
 describe("formatting", () => {
@@ -485,5 +544,28 @@ describe("session state", () => {
 		// then
 		expect(firstResult).toBe(true);
 		expect(secondResult).toBe(true);
+	});
+
+	it("#given previous loaded state #when loadStaticRules returns early #then public loaded state is cleared", () => {
+		// given
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/AGENTS.md`,
+			realPath: `${PROJECT_ROOT}/AGENTS.md`,
+			source: "AGENTS.md",
+			isSingleFile: true,
+			relativePath: "AGENTS.md",
+		});
+		const config = defaultConfig();
+		const engine = createEngine(config, createDeps([candidate], new Map([[candidate.path, "Project rule."]])));
+		engine.loadStaticRules(PROJECT_ROOT);
+		config.mode = "dynamic";
+
+		// when
+		const result = engine.loadStaticRules(PROJECT_ROOT);
+
+		// then
+		expect(result).toEqual({ rules: [], diagnostics: [] });
+		expect(engine.state.loadedRules).toEqual([]);
+		expect(engine.state.diagnostics).toEqual([]);
 	});
 });

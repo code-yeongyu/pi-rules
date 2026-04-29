@@ -1,4 +1,4 @@
-import { basename, dirname, join, relative } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
 
@@ -29,7 +29,6 @@ export interface EngineDeps {
 	readFile: (path: string) => string | null;
 	findProjectRoot: (startPath: string) => string | null;
 	extractToolPaths: (event: ToolResultEvent) => string[];
-	now?: () => number;
 }
 
 export interface Engine {
@@ -67,18 +66,18 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 	const state = createSessionState();
 
 	function loadStaticRules(cwd: string): { rules: LoadedRule[]; diagnostics: RuleDiagnostic[] } {
+		state.cwd = cwd;
 		if (config.disabled || config.mode === "off" || config.mode === "dynamic") {
-			return { rules: [], diagnostics: [] };
+			return emptyLoadResult(state);
 		}
 
-		state.cwd = cwd;
 		const projectRoot = deps.findProjectRoot(cwd);
 		const candidates = deps.findCandidates({
 			projectRoot,
 			targetFile: null,
 			disabledSources: disabledSourcesFor(config),
 		});
-		const result = loadStaticCandidates(candidates, deps);
+		const result = loadStaticCandidates(candidates, deps, projectRoot);
 		storeLastLoad(state, result.rules, result.diagnostics);
 		return result;
 	}
@@ -87,13 +86,14 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		cwd: string,
 		targetPaths: ReadonlyArray<string>,
 	): { rules: LoadedRule[]; diagnostics: RuleDiagnostic[] } {
+		state.cwd = cwd;
 		if (config.disabled || config.mode === "off" || config.mode === "static" || targetPaths.length === 0) {
-			return { rules: [], diagnostics: [] };
+			return emptyLoadResult(state);
 		}
 
-		state.cwd = cwd;
 		const rules: LoadedRule[] = [];
 		const diagnostics: RuleDiagnostic[] = [];
+		const seenRules = new Set<string>();
 		const disabledSources = disabledSourcesFor(config);
 
 		for (const targetFile of targetPaths) {
@@ -101,7 +101,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			const candidates = deps.findCandidates({ projectRoot, targetFile, disabledSources });
 
 			for (const candidate of sortCandidates(candidates)) {
-				const loadedRule = loadCandidate(candidate, deps, diagnostics);
+				const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot);
 				if (loadedRule === null) {
 					continue;
 				}
@@ -116,6 +116,12 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 					continue;
 				}
 
+				const dedupKey = ruleDedupKey(loadedRule);
+				if (seenRules.has(dedupKey)) {
+					continue;
+				}
+
+				seenRules.add(dedupKey);
 				rules.push({ ...loadedRule, matchReason: matchResult.reason });
 			}
 		}
@@ -151,7 +157,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 	};
 }
 
-function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: EngineDeps) {
+function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: EngineDeps, projectRoot: string | null) {
 	const rules: LoadedRule[] = [];
 	const diagnostics: RuleDiagnostic[] = [];
 	let rootSingleFileSelected = false;
@@ -161,7 +167,7 @@ function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: En
 			continue;
 		}
 
-		const loadedRule = loadCandidate(candidate, deps, diagnostics);
+		const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot);
 		if (loadedRule === null) {
 			continue;
 		}
@@ -185,7 +191,17 @@ function loadCandidate(
 	candidate: RuleCandidate,
 	deps: EngineDeps,
 	diagnostics: RuleDiagnostic[],
+	projectRoot: string | null,
 ): (LoadedRule & { matchReason: MatchReason }) | null {
+	if (!isCandidateWithinProject(candidate, projectRoot)) {
+		diagnostics.push({
+			severity: "warning",
+			source: candidate.path,
+			message: "Rule file resolves outside project root",
+		});
+		return null;
+	}
+
 	const content = deps.readFile(candidate.path);
 	if (content === null) {
 		diagnostics.push({ severity: "warning", source: candidate.path, message: "Unable to read rule file" });
@@ -204,6 +220,23 @@ function loadCandidate(
 		contentHash: hashContent(parsed.body),
 		matchReason: { kind: "no-match" },
 	};
+}
+
+function ruleDedupKey(rule: LoadedRule): string {
+	return `${rule.realPath}::${rule.contentHash}`;
+}
+
+function isCandidateWithinProject(candidate: RuleCandidate, projectRoot: string | null): boolean {
+	if (candidate.isGlobal) {
+		return true;
+	}
+
+	if (projectRoot === null) {
+		return false;
+	}
+
+	const relativeRealPath = relative(resolve(projectRoot), resolve(candidate.realPath));
+	return relativeRealPath === "" || (!relativeRealPath.startsWith("..") && !isAbsolute(relativeRealPath));
 }
 
 function staticMatchReason(rule: LoadedRule): MatchReason | null {
@@ -289,4 +322,9 @@ function storeLastLoad(
 	state.loadedRules.push(...rules);
 	state.diagnostics.length = 0;
 	state.diagnostics.push(...diagnostics);
+}
+
+function emptyLoadResult(state: SessionState): { rules: LoadedRule[]; diagnostics: RuleDiagnostic[] } {
+	storeLastLoad(state, [], []);
+	return { rules: [], diagnostics: [] };
 }
