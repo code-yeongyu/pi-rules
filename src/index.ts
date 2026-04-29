@@ -1,7 +1,126 @@
-// Stub entry point. Wave 3 fills in the registration logic.
-// Defaults to a no-op factory so `pi -e ./src/index.ts` does not error.
+import { readFileSync } from "node:fs";
+
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
-export default function piRulesExtension(_pi: ExtensionAPI): void {
-	// Implemented in Wave 3 (T33).
+import { createEngine, defaultConfig } from "./rules/engine.js";
+import { findRuleCandidates } from "./rules/finder.js";
+import { findProjectRoot } from "./rules/project-root.js";
+import { extractToolPaths } from "./rules/tool-paths.js";
+import type { PiRulesConfig } from "./rules/types.js";
+
+type PiRulesMode = PiRulesConfig["mode"];
+
+const MODE_VALUES = new Set<string>(["static", "dynamic", "both", "off"]);
+
+export default function piRulesExtension(pi: ExtensionAPI): void {
+	pi.registerFlag("pi-rules-disabled", {
+		type: "boolean",
+		default: false,
+		description: "Disable pi-rules hooks.",
+	});
+	pi.registerFlag("pi-rules-mode", {
+		type: "string",
+		default: "both",
+		description: "Rule injection mode: static, dynamic, both, or off.",
+	});
+	pi.registerFlag("pi-rules-widget", {
+		type: "boolean",
+		default: true,
+		description: "Enable the pi-rules widget when UI support lands.",
+	});
+
+	const config = defaultConfig();
+	const engine = createEngine(config, {
+		findCandidates: findRuleCandidates,
+		readFile: (path) => {
+			try {
+				return readFileSync(path, "utf-8");
+			} catch {
+				return null;
+			}
+		},
+		findProjectRoot,
+		extractToolPaths,
+	});
+
+	function syncConfigFromFlags(): void {
+		const disabled = pi.getFlag("pi-rules-disabled");
+		const mode = pi.getFlag("pi-rules-mode");
+		const widget = pi.getFlag("pi-rules-widget");
+
+		if (typeof disabled === "boolean") {
+			engine.config.disabled = disabled;
+		}
+		if (typeof mode === "string" && isPiRulesMode(mode)) {
+			engine.config.mode = mode;
+		}
+		if (typeof widget === "boolean") {
+			engine.config.widget = widget;
+		}
+	}
+
+	pi.on("session_start", async (event, ctx) => {
+		syncConfigFromFlags();
+		if (engine.config.disabled) {
+			return undefined;
+		}
+
+		engine.resetSession(ctx.cwd);
+		pi.appendEntry("pi-rules.scan", { cwd: ctx.cwd, reason: event.reason });
+		return undefined;
+	});
+
+	pi.on("before_agent_start", async (event, ctx) => {
+		syncConfigFromFlags();
+		if (engine.config.disabled || engine.config.mode === "off" || engine.config.mode === "dynamic") {
+			return undefined;
+		}
+
+		const loaded = engine.loadStaticRules(ctx.cwd);
+		const nativeContextPaths = new Set(
+			event.systemPromptOptions.contextFiles?.map((contextFile) => contextFile.path) ?? [],
+		);
+		const rules = loaded.rules.filter((rule) => !nativeContextPaths.has(rule.path) && !engine.isStaticInjected(rule));
+
+		if (rules.length === 0) {
+			return undefined;
+		}
+
+		const block = engine.formatStatic(rules);
+		for (const rule of rules) {
+			engine.markStaticInjected(rule);
+		}
+
+		return { systemPrompt: event.systemPrompt + block };
+	});
+
+	pi.on("tool_result", async (event, ctx) => {
+		syncConfigFromFlags();
+		if (engine.config.disabled || engine.config.mode === "off" || engine.config.mode === "static" || event.isError) {
+			return undefined;
+		}
+
+		const targetPaths = extractToolPaths(event);
+		const firstTargetPath = targetPaths[0];
+		if (firstTargetPath === undefined) {
+			return undefined;
+		}
+
+		const loaded = engine.loadDynamicRules(ctx.cwd, targetPaths);
+		const rules = loaded.rules.filter((rule) => !engine.isDynamicInjected(event.toolCallId, rule));
+		if (rules.length === 0) {
+			return undefined;
+		}
+
+		const block = engine.formatDynamic(rules, firstTargetPath);
+		for (const rule of rules) {
+			engine.markDynamicInjected(event.toolCallId, rule);
+		}
+
+		return { content: [...event.content, { type: "text", text: block }] };
+	});
+}
+
+function isPiRulesMode(value: string): value is PiRulesMode {
+	return MODE_VALUES.has(value);
 }
