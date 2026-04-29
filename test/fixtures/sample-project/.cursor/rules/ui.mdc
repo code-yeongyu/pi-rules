@@ -1,0 +1,7 @@
+---
+applyTo: "apps/web/**/*.tsx"
+---
+
+# UI rules
+
+React components must be functional and prop-typed.
