@@ -2,7 +2,7 @@ import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";
-import { createFakePi, type CapturedCommand, type FakePiHarness } from "../helpers/fake-pi.js";
+import { type CapturedCommand, createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
 
 const EXPECTED_FLAGS = ["pi-rules-disabled", "pi-rules-mode", "pi-rules-widget"];
 const EXPECTED_HANDLERS = ["session_start", "before_agent_start", "tool_result"];
@@ -95,7 +95,9 @@ describe("load extension integration", () => {
 		const ctx = harness.makeCommandCtx({ hasUI: false });
 
 		// when / then
-		await expect(Promise.all(harness.commands.map((command) => command.options.handler("", ctx)))).resolves.toBeDefined();
+		await expect(
+			Promise.all(harness.commands.map((command) => command.options.handler("", ctx))),
+		).resolves.toBeDefined();
 	});
 
 	it("#given factory called #when each command's getArgumentCompletions called with prefix #then returns array OR null (no errors)", async () => {
@@ -152,7 +154,9 @@ describe("load extension integration", () => {
 		const subcommands = ["list", "show foo.md", "paths", "status"];
 
 		// when / then
-		await expect(Promise.all(subcommands.map((subcommand) => command.options.handler(subcommand, ctx)))).resolves.toBeDefined();
+		await expect(
+			Promise.all(subcommands.map((subcommand) => command.options.handler(subcommand, ctx))),
+		).resolves.toBeDefined();
 	});
 
 	it("#given /reload-rules invoked with empty args #then handler completes without throwing", async () => {

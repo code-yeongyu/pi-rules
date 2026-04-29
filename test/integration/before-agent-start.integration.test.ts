@@ -87,7 +87,7 @@ describe("before_agent_start integration", () => {
 		expect(returnedEvent.systemPrompt.length).toBeGreaterThan(event.systemPrompt.length);
 	});
 
-	it("#given sample-project fixture #when before_agent_start emitted #then result.systemPrompt contains \"Project Instructions\"", async () => {
+	it('#given sample-project fixture #when before_agent_start emitted #then result.systemPrompt contains "Project Instructions"', async () => {
 		// given
 		const harness = registerExtension();
 		const cwd = projectCwd(SAMPLE_PROJECT);
@@ -100,7 +100,7 @@ describe("before_agent_start integration", () => {
 		expect(returnedEvent.systemPrompt).toContain("Project Instructions");
 	});
 
-	it("#given sample-project fixture #when before_agent_start emitted #then result.systemPrompt contains \"Instructions from:\"", async () => {
+	it('#given sample-project fixture #when before_agent_start emitted #then result.systemPrompt contains "Instructions from:"', async () => {
 		// given
 		const harness = registerExtension();
 		const cwd = projectCwd(SAMPLE_PROJECT);
@@ -201,7 +201,7 @@ describe("before_agent_start integration", () => {
 		expect(result).toBeUndefined();
 	});
 
-	it("#given mode set to \"off\" via flag #when before_agent_start emitted #then result is undefined", async () => {
+	it('#given mode set to "off" via flag #when before_agent_start emitted #then result is undefined', async () => {
 		// given
 		const harness = registerExtension();
 		harness.flagValues.set("pi-rules-mode", "off");
@@ -214,7 +214,7 @@ describe("before_agent_start integration", () => {
 		expect(result).toBeUndefined();
 	});
 
-	it("#given mode=\"dynamic\" via flag #when before_agent_start emitted #then result is undefined (dynamic mode skips static injection)", async () => {
+	it('#given mode="dynamic" via flag #when before_agent_start emitted #then result is undefined (dynamic mode skips static injection)', async () => {
 		// given
 		const harness = registerExtension();
 		harness.flagValues.set("pi-rules-mode", "dynamic");
