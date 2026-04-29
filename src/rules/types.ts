@@ -69,7 +69,7 @@ export interface LoadedRule extends RuleCandidate {
 	frontmatter: RuleFrontmatter;
 	body: string;
 	contentHash: string;
-	matchReason: string;
+	matchReason: MatchReason;
 }
 
 /**
