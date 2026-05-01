@@ -224,7 +224,7 @@ describe("parseRule", () => {
 
 	it("#given unicode body content #when parsing #then preserves unicode body", () => {
 		// given
-		const body = "한글 규칙과 emoji ✨를 보존한다.";
+		const body = "Preserve unicode 世界 and emoji ✨ in the body.";
 		const content = ruleMarkdown({ description: "Unicode" }, body);
 
 		// when
