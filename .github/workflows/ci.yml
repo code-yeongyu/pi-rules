@@ -37,11 +37,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Type check
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
+      - name: Check (tsgo + biome)
+        run: npm run check
 
       - name: Unit tests
         run: npm test
