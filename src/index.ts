@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
@@ -72,6 +72,12 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		return undefined;
 	});
 
+	pi.on("session_compact", async (_event, ctx) => {
+		engine.resetSession(ctx.cwd);
+		pi.appendEntry("pi-rules.scan", { cwd: ctx.cwd, reason: "compact" });
+		return undefined;
+	});
+
 	pi.on("before_agent_start", async (event, ctx) => {
 		syncConfigFromFlags();
 		if (engine.config.disabled || engine.config.mode === "off" || engine.config.mode === "dynamic") {
@@ -80,9 +86,19 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 
 		const loaded = engine.loadStaticRules(ctx.cwd);
 		const nativeContextPaths = new Set(
-			event.systemPromptOptions.contextFiles?.map((contextFile) => contextFile.path) ?? [],
+			event.systemPromptOptions.contextFiles?.flatMap((contextFile) => pathKeys(contextFile.path)) ?? [],
 		);
-		const rules = loaded.rules.filter((rule) => !nativeContextPaths.has(rule.path) && !engine.isStaticInjected(rule));
+		for (const rule of loaded.rules) {
+			if (nativeContextPaths.has(rule.path) || nativeContextPaths.has(rule.realPath)) {
+				engine.markStaticInjected(rule);
+			}
+		}
+		const rules = loaded.rules.filter(
+			(rule) =>
+				!nativeContextPaths.has(rule.path) &&
+				!nativeContextPaths.has(rule.realPath) &&
+				!engine.isStaticInjected(rule),
+		);
 
 		if (rules.length === 0) {
 			return undefined;
@@ -109,7 +125,9 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		}
 
 		const loaded = engine.loadDynamicRules(ctx.cwd, targetPaths);
-		const rules = loaded.rules.filter((rule) => !engine.isDynamicInjected(event.toolCallId, rule));
+		const rules = loaded.rules.filter(
+			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(event.toolCallId, rule),
+		);
 		if (rules.length === 0) {
 			return undefined;
 		}
@@ -125,4 +143,12 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 
 function isPiRulesMode(value: string): value is PiRulesMode {
 	return MODE_VALUES.has(value);
+}
+
+function pathKeys(filePath: string): string[] {
+	try {
+		return [filePath, realpathSync.native(filePath)];
+	} catch {
+		return [filePath];
+	}
 }

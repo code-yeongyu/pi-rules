@@ -250,7 +250,7 @@ describe("tool_result integration", () => {
 		expect(secondResult).toBeUndefined();
 	});
 
-	it('#given read tool result for App.tsx with toolCallId "a" then "b" #when both emitted #then both inject (different toolCallIds)', async () => {
+	it('#given read tool result for App.tsx with toolCallId "a" then "b" #when both emitted #then second is deduped', async () => {
 		// given
 		const { harness, ctx } = await createStartedHarness();
 
@@ -260,7 +260,46 @@ describe("tool_result integration", () => {
 
 		// then
 		expect(injectedText(firstResult)).toContain("Additional project instructions matched for");
-		expect(injectedText(secondResult)).toContain("Additional project instructions matched for");
+		expect(secondResult).toBeUndefined();
+	});
+
+	it("#given dynamic rule injected before compaction #when session_compact then same file read #then rule injects again", async () => {
+		// given
+		const { harness, ctx } = await createStartedHarness();
+		const beforeCompact = await harness.emit("tool_result", readToolResult(APP_FILE_PATH, "before-compact"), ctx);
+		expect(injectedText(beforeCompact)).toContain("Additional project instructions matched for");
+		const cached = await harness.emit("tool_result", readToolResult(APP_FILE_PATH, "cached-before-compact"), ctx);
+		expect(cached).toBeUndefined();
+
+		// when
+		await harness.emit("session_compact", { type: "session_compact" }, ctx);
+		const afterCompact = await harness.emit("tool_result", readToolResult(APP_FILE_PATH, "after-compact"), ctx);
+
+		// then
+		expect(injectedText(afterCompact)).toContain("Additional project instructions matched for");
+	});
+
+	it("#given static rules already injected #when tool_result emitted #then dynamic injection skips static duplicates", async () => {
+		// given
+		const { harness, ctx } = await createStartedHarness();
+		const beforeAgentResult = await harness.emit(
+			"before_agent_start",
+			{
+				type: "before_agent_start",
+				prompt: "Implement the task.",
+				systemPrompt: "Base prompt.",
+				systemPromptOptions: { cwd: SAMPLE_PROJECT, contextFiles: [] },
+			},
+			ctx,
+		);
+
+		// when
+		const result = await harness.emit("tool_result", readToolResult(APP_FILE_PATH), ctx);
+
+		// then
+		expect(beforeAgentResult).toEqual({ systemPrompt: expect.stringContaining("Project Instructions") });
+		expect(injectedText(result)).not.toContain("Always wear safety goggles when refactoring.");
+		expect(injectedText(result)).toContain("React components must be functional and prop-typed.");
 	});
 
 	it("#given pi-rules-disabled=true flag #when tool_result emitted #then returns undefined", async () => {

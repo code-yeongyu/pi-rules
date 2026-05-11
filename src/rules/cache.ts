@@ -1,5 +1,7 @@
 import type { LoadedRule, SessionState } from "./types.js";
 
+const DYNAMIC_SESSION_KEY = "__pi-rules-session__";
+
 export function createSessionState(cwd?: string): SessionState {
 	return { cwd, staticDedup: new Set(), dynamicDedup: new Map(), loadedRules: [], diagnostics: [] };
 }
@@ -23,10 +25,11 @@ export function markStaticInjected(state: SessionState, rule: LoadedRule): boole
 }
 
 export function markDynamicInjected(state: SessionState, toolCallId: string, rule: LoadedRule): boolean {
-	let keys = state.dynamicDedup.get(toolCallId);
+	void toolCallId;
+	let keys = state.dynamicDedup.get(DYNAMIC_SESSION_KEY);
 	if (keys === undefined) {
 		keys = new Set();
-		state.dynamicDedup.set(toolCallId, keys);
+		state.dynamicDedup.set(DYNAMIC_SESSION_KEY, keys);
 	}
 
 	const key = dynamicDedupKey(rule.realPath, rule.contentHash);
@@ -43,7 +46,8 @@ export function isStaticInjected(state: SessionState, rule: LoadedRule): boolean
 }
 
 export function isDynamicInjected(state: SessionState, toolCallId: string, rule: LoadedRule): boolean {
-	return state.dynamicDedup.get(toolCallId)?.has(dynamicDedupKey(rule.realPath, rule.contentHash)) === true;
+	void toolCallId;
+	return state.dynamicDedup.get(DYNAMIC_SESSION_KEY)?.has(dynamicDedupKey(rule.realPath, rule.contentHash)) === true;
 }
 
 export function clearSession(state: SessionState): void {
@@ -54,5 +58,6 @@ export function clearSession(state: SessionState): void {
 }
 
 export function clearDynamicForToolCall(state: SessionState, toolCallId: string): void {
-	state.dynamicDedup.delete(toolCallId);
+	void state;
+	void toolCallId;
 }

@@ -121,7 +121,7 @@ export interface PiRulesConfig {
  * Per-session in-memory dedup state.
  *
  * `staticDedup` keys are `{cwd}::{rulePath}::{contentHash}` strings.
- * `dynamicDedup` is keyed by `toolCallId` and stores `{rulePath}::{contentHash}` strings.
+ * `dynamicDedup` stores session-scoped `{rulePath}::{contentHash}` strings.
  */
 export interface SessionState {
 	cwd: string | undefined;

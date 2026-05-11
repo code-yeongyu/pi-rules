@@ -142,7 +142,7 @@ describe("markDynamicInjected", () => {
 		expect(secondResult).toBe(false);
 	});
 
-	it("#given marked rule for toolCallId X #when marking same rule for toolCallId Y #then returns true (per-toolCallId dedup)", () => {
+	it("#given marked rule for toolCallId X #when marking same rule for toolCallId Y #then returns false (session dedup)", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
@@ -153,7 +153,7 @@ describe("markDynamicInjected", () => {
 
 		// then
 		expect(firstResult).toBe(true);
-		expect(secondResult).toBe(true);
+		expect(secondResult).toBe(false);
 	});
 });
 
@@ -219,7 +219,7 @@ describe("clearSession", () => {
 });
 
 describe("clearDynamicForToolCall", () => {
-	it("#given clearDynamicForToolCall(X) #when X has entries #then X cleared but Y unaffected", () => {
+	it("#given clearDynamicForToolCall(X) #when X has entries #then session-scoped dynamic dedup remains", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
@@ -230,7 +230,7 @@ describe("clearDynamicForToolCall", () => {
 		clearDynamicForToolCall(state, "tool-call-x");
 
 		// then
-		expect(isDynamicInjected(state, "tool-call-x", rule)).toBe(false);
+		expect(isDynamicInjected(state, "tool-call-x", rule)).toBe(true);
 		expect(isDynamicInjected(state, "tool-call-y", rule)).toBe(true);
 	});
 });

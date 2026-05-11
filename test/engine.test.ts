@@ -502,7 +502,7 @@ describe("session state", () => {
 		engine.clearToolCall("tool-call-x");
 
 		// then
-		expect(engine.isDynamicInjected("tool-call-x", rule)).toBe(false);
+		expect(engine.isDynamicInjected("tool-call-x", rule)).toBe(true);
 		expect(engine.isDynamicInjected("tool-call-y", rule)).toBe(true);
 	});
 
@@ -532,7 +532,7 @@ describe("session state", () => {
 		expect(engine.isStaticInjected(rule)).toBe(true);
 	});
 
-	it("#given markDynamicInjected for two different toolCallIds same rule #when both called #then both return true", () => {
+	it("#given markDynamicInjected for two different toolCallIds same rule #when both called #then second returns false", () => {
 		// given
 		const engine = createTestEngine({}, [], new Map());
 		const rule = makeRule();
@@ -543,7 +543,7 @@ describe("session state", () => {
 
 		// then
 		expect(firstResult).toBe(true);
-		expect(secondResult).toBe(true);
+		expect(secondResult).toBe(false);
 	});
 
 	it("#given previous loaded state #when loadStaticRules returns early #then public loaded state is cleared", () => {
