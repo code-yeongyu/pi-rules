@@ -27,7 +27,6 @@ function createStubEngine(
 		formatStatic: () => "static block",
 		formatDynamic: () => "dynamic block",
 		resetSession: options.resetSession ?? (() => {}),
-		clearToolCall: () => {},
 		isStaticInjected: () => false,
 		isDynamicInjected: () => false,
 		markStaticInjected: () => true,

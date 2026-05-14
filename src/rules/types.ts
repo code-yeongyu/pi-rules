@@ -111,7 +111,6 @@ export interface TruncationResult {
 export interface PiRulesConfig {
 	disabled: boolean;
 	mode: "static" | "dynamic" | "both" | "off";
-	widget: boolean;
 	maxRuleChars: number;
 	maxResultChars: number;
 	enabledSources: RuleSource[] | "auto";

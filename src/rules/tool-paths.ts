@@ -2,13 +2,13 @@ import { isAbsolute, resolve } from "node:path";
 
 import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
 
-import { TRACKED_BUILTIN_TOOLS } from "./constants.js";
+import { TRACKED_BUILTIN_TOOL_SET } from "./constants.js";
 
 export function isTrackedTool(toolName: string): boolean {
-	return TRACKED_BUILTIN_TOOLS.includes(toolName);
+	return TRACKED_BUILTIN_TOOL_SET.has(toolName);
 }
 
-export function extractToolPaths(event: ToolResultEvent): string[] {
+export function extractToolPaths(event: ToolResultEvent, cwd: string): string[] {
 	if (event.isError || !isTrackedTool(event.toolName)) {
 		return [];
 	}
@@ -16,24 +16,24 @@ export function extractToolPaths(event: ToolResultEvent): string[] {
 	const filePaths = new Set<string>();
 
 	if (event.toolName === "read" || event.toolName === "edit") {
-		addPath(filePaths, getStringProperty(event.details, "filePath"));
-		addPath(filePaths, getStringProperty(event.input, "path"));
+		addPath(filePaths, getStringProperty(event.details, "filePath"), cwd);
+		addPath(filePaths, getStringProperty(event.input, "path"), cwd);
 	}
 
 	if (event.toolName === "write") {
-		addPath(filePaths, getStringProperty(event.input, "filePath"));
-		addPath(filePaths, getStringProperty(event.input, "path"));
+		addPath(filePaths, getStringProperty(event.input, "filePath"), cwd);
+		addPath(filePaths, getStringProperty(event.input, "path"), cwd);
 	}
 
 	return [...filePaths];
 }
 
-function addPath(filePaths: Set<string>, filePath: string | undefined): void {
+function addPath(filePaths: Set<string>, filePath: string | undefined, cwd: string): void {
 	if (filePath === undefined || filePath.length === 0) {
 		return;
 	}
 
-	filePaths.add(isAbsolute(filePath) ? filePath : resolve(filePath));
+	filePaths.add(isAbsolute(filePath) ? filePath : resolve(cwd, filePath));
 }
 
 function getStringProperty(value: unknown, propertyName: string): string | undefined {

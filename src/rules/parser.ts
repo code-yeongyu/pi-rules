@@ -1,3 +1,4 @@
+import { RuleFrontmatterParseError } from "./errors.js";
 import type { ParsedRule, RuleFrontmatter } from "./types.js";
 
 const FRONTMATTER_OPENING = "---\n";
@@ -85,7 +86,7 @@ function parseYamlFrontmatter(yamlContent: string): RuleFrontmatter {
 
 		const colonIndex = line.indexOf(":");
 		if (colonIndex === -1) {
-			throw new Error(`Expected key-value pair on line ${lineIndex + 1}`);
+			throw new RuleFrontmatterParseError(`Expected key-value pair on line ${lineIndex + 1}`);
 		}
 
 		const key = line.slice(0, colonIndex).trim();
@@ -127,7 +128,7 @@ function parseYamlFrontmatter(yamlContent: string): RuleFrontmatter {
 function parseBooleanValue(value: string, lineNumber: number): boolean {
 	if (value === "true") return true;
 	if (value === "false") return false;
-	throw new Error(`Expected boolean on line ${lineNumber}`);
+	throw new RuleFrontmatterParseError(`Expected boolean on line ${lineNumber}`);
 }
 
 function parseGlobValue(rawValue: string, lines: string[], lineIndex: number): { values: string[]; consumed: number } {
@@ -180,12 +181,12 @@ function parseMultilineArray(lines: string[], lineIndex: number): { values: stri
 function parseInlineArray(value: string): string[] {
 	const closingBracketIndex = findClosingBracket(value);
 	if (closingBracketIndex === -1) {
-		throw new Error("Unclosed inline array");
+		throw new RuleFrontmatterParseError("Unclosed inline array");
 	}
 
 	const trailing = value.slice(closingBracketIndex + 1).trim();
 	if (trailing.length > 0) {
-		throw new Error("Unexpected content after inline array");
+		throw new RuleFrontmatterParseError("Unexpected content after inline array");
 	}
 
 	const content = value.slice(1, closingBracketIndex).trim();
@@ -263,7 +264,7 @@ function splitCommaSeparated(value: string): string[] {
 	}
 
 	if (quote !== null) {
-		throw new Error("Unclosed quoted value");
+		throw new RuleFrontmatterParseError("Unclosed quoted value");
 	}
 
 	values.push(current.trim());
@@ -274,7 +275,7 @@ function parseStringValue(value: string): string {
 	if (value.length === 0) return "";
 	if (value.startsWith('"')) return parseJsonString(value);
 	if (value.startsWith("'") && value.endsWith("'")) return value.slice(1, -1);
-	if (value.startsWith("'")) throw new Error("Unclosed quoted value");
+	if (value.startsWith("'")) throw new RuleFrontmatterParseError("Unclosed quoted value");
 	return value;
 }
 
@@ -283,11 +284,11 @@ function parseJsonString(value: string): string {
 	try {
 		parsedValue = JSON.parse(value);
 	} catch {
-		throw new Error("Invalid JSON-quoted string");
+		throw new RuleFrontmatterParseError("Invalid JSON-quoted string");
 	}
 
 	if (typeof parsedValue !== "string") {
-		throw new Error("Expected JSON-quoted string");
+		throw new RuleFrontmatterParseError("Expected JSON-quoted string");
 	}
 
 	return parsedValue;

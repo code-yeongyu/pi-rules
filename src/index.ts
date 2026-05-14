@@ -1,4 +1,5 @@
 import { readFileSync, realpathSync } from "node:fs";
+import { isAbsolute, relative } from "node:path";
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 
@@ -24,12 +25,6 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		default: "both",
 		description: "Rule injection mode: static, dynamic, both, or off.",
 	});
-	pi.registerFlag("pi-rules-widget", {
-		type: "boolean",
-		default: true,
-		description: "Enable the pi-rules widget when UI support lands.",
-	});
-
 	const config = defaultConfig();
 	const engine = createEngine(config, {
 		findCandidates: findRuleCandidates,
@@ -48,16 +43,12 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 	function syncConfigFromFlags(): void {
 		const disabled = pi.getFlag("pi-rules-disabled");
 		const mode = pi.getFlag("pi-rules-mode");
-		const widget = pi.getFlag("pi-rules-widget");
 
 		if (typeof disabled === "boolean") {
 			engine.config.disabled = disabled;
 		}
 		if (typeof mode === "string" && isPiRulesMode(mode)) {
 			engine.config.mode = mode;
-		}
-		if (typeof widget === "boolean") {
-			engine.config.widget = widget;
 		}
 	}
 
@@ -118,23 +109,21 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 			return undefined;
 		}
 
-		const targetPaths = extractToolPaths(event);
+		const targetPaths = extractToolPaths(event, ctx.cwd);
 		const firstTargetPath = targetPaths[0];
 		if (firstTargetPath === undefined) {
 			return undefined;
 		}
 
 		const loaded = engine.loadDynamicRules(ctx.cwd, targetPaths);
-		const rules = loaded.rules.filter(
-			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(event.toolCallId, rule),
-		);
+		const rules = loaded.rules.filter((rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(rule));
 		if (rules.length === 0) {
 			return undefined;
 		}
 
-		const block = engine.formatDynamic(rules, firstTargetPath);
+		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstTargetPath));
 		for (const rule of rules) {
-			engine.markDynamicInjected(event.toolCallId, rule);
+			engine.markDynamicInjected(rule);
 		}
 
 		return { content: [...event.content, { type: "text", text: block }] };
@@ -151,4 +140,8 @@ function pathKeys(filePath: string): string[] {
 	} catch {
 		return [filePath];
 	}
+}
+
+function displayPath(cwd: string, filePath: string): string {
+	return isAbsolute(filePath) ? relative(cwd, filePath) : filePath;
 }

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import piRulesExtension from "../../src/index.js";
 import { type CapturedCommand, createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
 
-const EXPECTED_FLAGS = ["pi-rules-disabled", "pi-rules-mode", "pi-rules-widget"];
+const EXPECTED_FLAGS = ["pi-rules-disabled", "pi-rules-mode"];
 const EXPECTED_HANDLERS = ["session_start", "before_agent_start", "tool_result"];
 const EXPECTED_COMMANDS = ["rules", "reload-rules"];
 
@@ -53,7 +53,7 @@ describe("load extension integration", () => {
 		expect(() => piRulesExtension(harness.pi)).not.toThrow();
 	});
 
-	it('#given factory called #when inspecting harness.flags #then 3 flags registered: pi-rules-disabled (boolean, default false), pi-rules-mode (string, default "both"), pi-rules-widget (boolean, default true)', () => {
+	it("#given factory called #when inspecting harness.flags #then disabled and mode flags registered", () => {
 		// given
 		const harness = registerExtension();
 
@@ -64,7 +64,6 @@ describe("load extension integration", () => {
 		expect(flags.map((flag) => flag.name)).toEqual(EXPECTED_FLAGS);
 		expect(harness.flags.get("pi-rules-disabled")?.options).toMatchObject({ type: "boolean", default: false });
 		expect(harness.flags.get("pi-rules-mode")?.options).toMatchObject({ type: "string", default: "both" });
-		expect(harness.flags.get("pi-rules-widget")?.options).toMatchObject({ type: "boolean", default: true });
 	});
 
 	it("#given factory called #when inspecting harness.handlers #then 3 hooks registered: session_start, before_agent_start, tool_result", () => {

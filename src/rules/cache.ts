@@ -24,8 +24,7 @@ export function markStaticInjected(state: SessionState, rule: LoadedRule): boole
 	return true;
 }
 
-export function markDynamicInjected(state: SessionState, toolCallId: string, rule: LoadedRule): boolean {
-	void toolCallId;
+export function markDynamicInjected(state: SessionState, rule: LoadedRule): boolean {
 	let keys = state.dynamicDedup.get(DYNAMIC_SESSION_KEY);
 	if (keys === undefined) {
 		keys = new Set();
@@ -45,8 +44,7 @@ export function isStaticInjected(state: SessionState, rule: LoadedRule): boolean
 	return state.staticDedup.has(staticDedupKey(state.cwd ?? "", rule.realPath, rule.contentHash));
 }
 
-export function isDynamicInjected(state: SessionState, toolCallId: string, rule: LoadedRule): boolean {
-	void toolCallId;
+export function isDynamicInjected(state: SessionState, rule: LoadedRule): boolean {
 	return state.dynamicDedup.get(DYNAMIC_SESSION_KEY)?.has(dynamicDedupKey(rule.realPath, rule.contentHash)) === true;
 }
 
@@ -55,9 +53,4 @@ export function clearSession(state: SessionState): void {
 	state.dynamicDedup.clear();
 	state.loadedRules.length = 0;
 	state.diagnostics.length = 0;
-}
-
-export function clearDynamicForToolCall(state: SessionState, toolCallId: string): void {
-	void state;
-	void toolCallId;
 }

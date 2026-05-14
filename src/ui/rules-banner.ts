@@ -5,7 +5,6 @@ import { DynamicBorder } from "./dynamic-border.js";
 
 export interface RulesBannerProps {
 	ruleCount: number;
-	sources: ReadonlyArray<{ source: string; count: number }>;
 	diagnostics: ReadonlyArray<RuleDiagnostic>;
 	topRules?: ReadonlyArray<Pick<LoadedRule, "relativePath" | "matchReason">>;
 }

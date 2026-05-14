@@ -93,6 +93,7 @@ export const TRUNCATION_NOTICE = "\n\n[Rule truncated. Read full rule: {path}]";
  * Built-in tool names whose results trigger dynamic rule injection.
  */
 export const TRACKED_BUILTIN_TOOLS: readonly string[] = ["read", "edit", "write"];
+export const TRACKED_BUILTIN_TOOL_SET: ReadonlySet<string> = new Set(TRACKED_BUILTIN_TOOLS);
 
 /**
  * Directories excluded by the recursive scanner regardless of glob settings.

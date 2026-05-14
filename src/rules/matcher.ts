@@ -36,6 +36,7 @@ export function matchRule(input: MatcherInput): MatchResult {
 
 	const positivePatterns = patterns.filter((pattern) => !pattern.startsWith("!"));
 	const negativePatterns = patterns.filter((pattern) => pattern.startsWith("!"));
+	const negativeMatchers = negativePatterns.map((pattern) => picomatch(pattern.slice(1), { bash: true, dot: true }));
 
 	for (const pattern of positivePatterns) {
 		const isMatch = picomatch(pattern, { bash: true, dot: true });
@@ -45,7 +46,7 @@ export function matchRule(input: MatcherInput): MatchResult {
 				continue;
 			}
 
-			if (isExcluded(pathBase, negativePatterns)) {
+			if (isExcluded(pathBase, negativeMatchers)) {
 				return noMatch();
 			}
 
@@ -82,9 +83,9 @@ function normalizePath(path: string): string {
 	return path.replaceAll("\\", "/");
 }
 
-function isExcluded(pathBase: string, negativePatterns: string[]): boolean {
-	for (const negativePattern of negativePatterns) {
-		if (picomatch(negativePattern.slice(1), { bash: true, dot: true })(pathBase)) {
+function isExcluded(pathBase: string, negativeMatchers: ReadonlyArray<(path: string) => boolean>): boolean {
+	for (const isMatch of negativeMatchers) {
+		if (isMatch(pathBase)) {
 			return true;
 		}
 	}

@@ -126,6 +126,17 @@ describe("tool_result integration", () => {
 		expect(injectedText(result)).toContain("Additional project instructions matched for");
 	});
 
+	it("#given absolute tool target #when emitted #then dynamic header uses cwd-relative display path", async () => {
+		// given
+		const { harness, ctx } = await createStartedHarness();
+
+		// when
+		const result = await harness.emit("tool_result", readToolResult(APP_FILE_PATH), ctx);
+
+		// then
+		expect(injectedText(result)).toContain("Additional project instructions matched for apps/web/src/App.tsx:");
+	});
+
 	it("#given read tool result for App.tsx (matches **/*.tsx) #when emitted #then typescript.md content present in injected text", async () => {
 		// given
 		const { harness, ctx } = await createStartedHarness();

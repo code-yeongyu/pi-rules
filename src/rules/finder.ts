@@ -9,6 +9,7 @@ import {
 	USER_HOME_RULE_SUBDIRS,
 	USER_HOME_SINGLE_FILES,
 } from "./constants.js";
+import { UnsupportedRuleSourceError } from "./errors.js";
 import { scanRuleFiles } from "./scanner.js";
 import type { RuleCandidate, RuleSource } from "./types.js";
 
@@ -227,7 +228,7 @@ function toProjectRuleSource(parentDirectory: string, subDirectory: string): Rul
 		case ".github/instructions":
 			return source;
 		default:
-			throw new Error(`Unsupported project rule source: ${source}`);
+			throw new UnsupportedRuleSourceError(`Unsupported project rule source: ${source}`);
 	}
 }
 
@@ -239,7 +240,7 @@ function toProjectSingleFileSource(ruleFile: string): RuleSource {
 		case "CONTEXT.md":
 			return ruleFile;
 		default:
-			throw new Error(`Unsupported project single-file source: ${ruleFile}`);
+			throw new UnsupportedRuleSourceError(`Unsupported project single-file source: ${ruleFile}`);
 	}
 }
 
@@ -251,7 +252,7 @@ function toUserHomeRuleSource(ruleSubdir: string): RuleSource {
 		case "~/.claude/rules":
 			return source;
 		default:
-			throw new Error(`Unsupported user-home rule source: ${source}`);
+			throw new UnsupportedRuleSourceError(`Unsupported user-home rule source: ${source}`);
 	}
 }
 
@@ -262,6 +263,6 @@ function toUserHomeSingleFileSource(ruleFile: string): RuleSource {
 		case "~/.claude/CLAUDE.md":
 			return source;
 		default:
-			throw new Error(`Unsupported user-home single-file source: ${source}`);
+			throw new UnsupportedRuleSourceError(`Unsupported user-home single-file source: ${source}`);
 	}
 }

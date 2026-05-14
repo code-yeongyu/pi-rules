@@ -67,12 +67,11 @@ function createTestEngine(
 }
 
 describe("defaultConfig", () => {
-	it('#given defaultConfig #when called #then returns { disabled: false, mode: "both", widget: true, maxRuleChars: 12000, maxResultChars: 40000, enabledSources: "auto" }', () => {
+	it('#given defaultConfig #when called #then returns { disabled: false, mode: "both", maxRuleChars: 12000, maxResultChars: 40000, enabledSources: "auto" }', () => {
 		// given
 		const expected = {
 			disabled: false,
 			mode: "both",
-			widget: true,
 			maxRuleChars: DEFAULT_MAX_RULE_CHARS,
 			maxResultChars: DEFAULT_MAX_RESULT_CHARS,
 			enabledSources: "auto",
@@ -480,7 +479,7 @@ describe("session state", () => {
 		const engine = createTestEngine({}, [], new Map());
 		const rule = makeRule();
 		engine.markStaticInjected(rule);
-		engine.markDynamicInjected("tool-call-x", rule);
+		engine.markDynamicInjected(rule);
 
 		// when
 		engine.resetSession("/workspace/other");
@@ -489,21 +488,6 @@ describe("session state", () => {
 		expect(engine.state.staticDedup.size).toBe(0);
 		expect(engine.state.dynamicDedup.size).toBe(0);
 		expect(engine.state.cwd).toBe("/workspace/other");
-	});
-
-	it("#given clearToolCall #when called for specific toolCallId #then only that toolCallId state cleared", () => {
-		// given
-		const engine = createTestEngine({}, [], new Map());
-		const rule = makeRule();
-		engine.markDynamicInjected("tool-call-x", rule);
-		engine.markDynamicInjected("tool-call-y", rule);
-
-		// when
-		engine.clearToolCall("tool-call-x");
-
-		// then
-		expect(engine.isDynamicInjected("tool-call-x", rule)).toBe(true);
-		expect(engine.isDynamicInjected("tool-call-y", rule)).toBe(true);
 	});
 
 	it("#given markStaticInjected called twice for same rule #when called second time #then returns false", () => {
@@ -532,14 +516,14 @@ describe("session state", () => {
 		expect(engine.isStaticInjected(rule)).toBe(true);
 	});
 
-	it("#given markDynamicInjected for two different toolCallIds same rule #when both called #then second returns false", () => {
+	it("#given markDynamicInjected for same rule twice #when both called #then second returns false", () => {
 		// given
 		const engine = createTestEngine({}, [], new Map());
 		const rule = makeRule();
 
 		// when
-		const firstResult = engine.markDynamicInjected("tool-call-x", rule);
-		const secondResult = engine.markDynamicInjected("tool-call-y", rule);
+		const firstResult = engine.markDynamicInjected(rule);
+		const secondResult = engine.markDynamicInjected(rule);
 
 		// then
 		expect(firstResult).toBe(true);

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-	clearDynamicForToolCall,
 	clearSession,
 	createSessionState,
 	dynamicDedupKey,
@@ -116,40 +115,40 @@ describe("markStaticInjected", () => {
 });
 
 describe("markDynamicInjected", () => {
-	it("#given fresh state #when marking dynamic injected first time for toolCallId X #then returns true", () => {
+	it("#given fresh state #when marking dynamic injected first time #then returns true", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 
 		// when
-		const result = markDynamicInjected(state, "tool-call-x", rule);
+		const result = markDynamicInjected(state, rule);
 
 		// then
 		expect(result).toBe(true);
 	});
 
-	it("#given marked rule #when marking dynamic injected again same toolCallId same rule #then returns false", () => {
+	it("#given marked rule #when marking dynamic injected again same rule #then returns false", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 
 		// when
-		const firstResult = markDynamicInjected(state, "tool-call-x", rule);
-		const secondResult = markDynamicInjected(state, "tool-call-x", rule);
+		const firstResult = markDynamicInjected(state, rule);
+		const secondResult = markDynamicInjected(state, rule);
 
 		// then
 		expect(firstResult).toBe(true);
 		expect(secondResult).toBe(false);
 	});
 
-	it("#given marked rule for toolCallId X #when marking same rule for toolCallId Y #then returns false (session dedup)", () => {
+	it("#given marked dynamic rule #when marking same rule again #then returns false (session dedup)", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 
 		// when
-		const firstResult = markDynamicInjected(state, "tool-call-x", rule);
-		const secondResult = markDynamicInjected(state, "tool-call-y", rule);
+		const firstResult = markDynamicInjected(state, rule);
+		const secondResult = markDynamicInjected(state, rule);
 
 		// then
 		expect(firstResult).toBe(true);
@@ -162,10 +161,10 @@ describe("isInjected", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
-		markDynamicInjected(state, "tool-call-x", rule);
+		markDynamicInjected(state, rule);
 
 		// when
-		const result = isDynamicInjected(state, "tool-call-x", rule);
+		const result = isDynamicInjected(state, rule);
 
 		// then
 		expect(result).toBe(true);
@@ -191,7 +190,7 @@ describe("clearSession", () => {
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 		markStaticInjected(state, rule);
-		markDynamicInjected(state, "tool-call-x", rule);
+		markDynamicInjected(state, rule);
 		state.loadedRules.push(rule);
 		state.diagnostics.push({ severity: "warning", source: rule.realPath, message: "diagnostic" });
 
@@ -215,23 +214,6 @@ describe("clearSession", () => {
 
 		// then
 		expect(state.cwd).toBe(cwd);
-	});
-});
-
-describe("clearDynamicForToolCall", () => {
-	it("#given clearDynamicForToolCall(X) #when X has entries #then session-scoped dynamic dedup remains", () => {
-		// given
-		const state = createSessionState();
-		const rule = makeLoadedRule();
-		markDynamicInjected(state, "tool-call-x", rule);
-		markDynamicInjected(state, "tool-call-y", rule);
-
-		// when
-		clearDynamicForToolCall(state, "tool-call-x");
-
-		// then
-		expect(isDynamicInjected(state, "tool-call-x", rule)).toBe(true);
-		expect(isDynamicInjected(state, "tool-call-y", rule)).toBe(true);
 	});
 });
 

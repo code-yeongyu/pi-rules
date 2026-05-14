@@ -102,7 +102,6 @@ describe("RulesBanner", () => {
 		const banner = new RulesBanner(
 			{
 				ruleCount: 0,
-				sources: [],
 				diagnostics: [],
 			},
 			fakeTheme,
@@ -116,7 +115,6 @@ describe("renderBannerLines", () => {
 		const lines = renderBannerLines(
 			{
 				ruleCount: 3,
-				sources: [{ source: "workspace", count: 3 }],
 				diagnostics: [],
 				topRules: [
 					{ relativePath: "rule1.md", matchReason: "alwaysApply" },
@@ -143,7 +141,6 @@ describe("renderBannerLines", () => {
 		const lines = renderBannerLines(
 			{
 				ruleCount: 0,
-				sources: [],
 				diagnostics: [],
 			},
 			fakeTheme,
@@ -159,7 +156,6 @@ describe("renderBannerLines", () => {
 		const lines = renderBannerLines(
 			{
 				ruleCount: 5,
-				sources: [{ source: "workspace", count: 5 }],
 				diagnostics: [],
 				topRules: [
 					{ relativePath: "rule1.md", matchReason: "alwaysApply" },
@@ -178,7 +174,6 @@ describe("renderBannerLines", () => {
 		const lines = renderBannerLines(
 			{
 				ruleCount: 1,
-				sources: [{ source: "workspace", count: 1 }],
 				diagnostics: [
 					{ severity: "warning", source: "rule1.md", message: "warn1" },
 					{ severity: "warning", source: "rule2.md", message: "warn2" },

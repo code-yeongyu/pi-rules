@@ -3,7 +3,6 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
 
 import {
-	clearDynamicForToolCall,
 	clearSession,
 	createSessionState,
 	isDynamicInjected as isDynamicInjectedInState,
@@ -11,7 +10,12 @@ import {
 	markDynamicInjected as markDynamicInjectedInState,
 	markStaticInjected as markStaticInjectedInState,
 } from "./cache.js";
-import { DEFAULT_MAX_RESULT_CHARS, DEFAULT_MAX_RULE_CHARS, SOURCE_PRIORITY } from "./constants.js";
+import {
+	DEFAULT_MAX_RESULT_CHARS,
+	DEFAULT_MAX_RULE_CHARS,
+	PROJECT_SINGLE_FILES,
+	SOURCE_PRIORITY,
+} from "./constants.js";
 import { formatDynamicBlock, formatStaticBlock } from "./formatter.js";
 import { hashContent, matchRule } from "./matcher.js";
 import { sortCandidates } from "./ordering.js";
@@ -28,7 +32,7 @@ export interface EngineDeps {
 	}) => RuleCandidate[];
 	readFile: (path: string) => string | null;
 	findProjectRoot: (startPath: string) => string | null;
-	extractToolPaths: (event: ToolResultEvent) => string[];
+	extractToolPaths: (event: ToolResultEvent, cwd: string) => string[];
 }
 
 export interface Engine {
@@ -42,20 +46,18 @@ export interface Engine {
 	formatStatic(rules: ReadonlyArray<LoadedRule>): string;
 	formatDynamic(rules: ReadonlyArray<LoadedRule>, target: string): string;
 	resetSession(cwd?: string): void;
-	clearToolCall(toolCallId: string): void;
 	isStaticInjected(rule: LoadedRule): boolean;
-	isDynamicInjected(toolCallId: string, rule: LoadedRule): boolean;
+	isDynamicInjected(rule: LoadedRule): boolean;
 	markStaticInjected(rule: LoadedRule): boolean;
-	markDynamicInjected(toolCallId: string, rule: LoadedRule): boolean;
+	markDynamicInjected(rule: LoadedRule): boolean;
 }
 
-const ROOT_SINGLE_FILE_SOURCES = new Set(["AGENTS.md", "CLAUDE.md", "CONTEXT.md"]);
+const ROOT_SINGLE_FILE_SOURCES = new Set(PROJECT_SINGLE_FILES.filter((source) => !source.includes("/")));
 
 export function defaultConfig(): PiRulesConfig {
 	return {
 		disabled: false,
 		mode: "both",
-		widget: true,
 		maxRuleChars: DEFAULT_MAX_RULE_CHARS,
 		maxResultChars: DEFAULT_MAX_RESULT_CHARS,
 		enabledSources: "auto",
@@ -149,11 +151,10 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 				state.cwd = cwd;
 			}
 		},
-		clearToolCall: (toolCallId) => clearDynamicForToolCall(state, toolCallId),
 		isStaticInjected: (rule) => isStaticInjectedInState(state, rule),
-		isDynamicInjected: (toolCallId, rule) => isDynamicInjectedInState(state, toolCallId, rule),
+		isDynamicInjected: (rule) => isDynamicInjectedInState(state, rule),
 		markStaticInjected: (rule) => markStaticInjectedInState(state, rule),
-		markDynamicInjected: (toolCallId, rule) => markDynamicInjectedInState(state, toolCallId, rule),
+		markDynamicInjected: (rule) => markDynamicInjectedInState(state, rule),
 	};
 }
 

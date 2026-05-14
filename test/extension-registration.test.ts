@@ -87,7 +87,7 @@ function bashToolResultEvent(): ToolResultEvent {
 }
 
 describe("piRulesExtension", () => {
-	it("#given fake pi #when extension factory called #then 3 flags registered (disabled, mode, widget)", () => {
+	it("#given fake pi #when extension factory called #then disabled and mode flags registered", () => {
 		// given
 		const fakePi = createFakePi();
 
@@ -95,10 +95,9 @@ describe("piRulesExtension", () => {
 		piRulesExtension(fakePi.pi);
 
 		// then
-		expect([...fakePi.flags.keys()]).toEqual(["pi-rules-disabled", "pi-rules-mode", "pi-rules-widget"]);
+		expect([...fakePi.flags.keys()]).toEqual(["pi-rules-disabled", "pi-rules-mode"]);
 		expect(fakePi.flags.get("pi-rules-disabled")?.options).toMatchObject({ type: "boolean", default: false });
 		expect(fakePi.flags.get("pi-rules-mode")?.options).toMatchObject({ type: "string", default: "both" });
-		expect(fakePi.flags.get("pi-rules-widget")?.options).toMatchObject({ type: "boolean", default: true });
 	});
 
 	it("#given fake pi #when factory called #then session_start handler registered", () => {

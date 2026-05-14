@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { extractToolPaths, isTrackedTool } from "../src/rules/tool-paths.js";
 
+const CWD = "/tmp/project";
+
 function toolResultEvent(
 	toolName: string,
 	overrides: Partial<Omit<ToolResultEvent, "type" | "toolCallId" | "toolName" | "input" | "content" | "isError">> & {
@@ -28,7 +30,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("read", { details: { filePath } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([filePath]);
@@ -40,7 +42,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("edit", { details: { filePath } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([filePath]);
@@ -52,10 +54,21 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("write", { input: { filePath } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([filePath]);
+	});
+
+	it("#given relative read path and cwd differs from process cwd #when extracting #then resolves against cwd", () => {
+		// given
+		const event = toolResultEvent("read", { input: { path: "src/read-target.ts" } });
+
+		// when
+		const paths = extractToolPaths(event, CWD);
+
+		// then
+		expect(paths).toEqual(["/tmp/project/src/read-target.ts"]);
 	});
 
 	it("#given tool with isError=true #when extracting #then returns []", () => {
@@ -66,7 +79,7 @@ describe("extractToolPaths", () => {
 		});
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -77,7 +90,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("bash", { input: { filePath: "/tmp/project/src/bash-target.ts" } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -88,7 +101,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("grep", { input: { filePath: "/tmp/project/src/grep-target.ts" } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -99,7 +112,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("find", { input: { filePath: "/tmp/project/src/find-target.ts" } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -110,7 +123,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("ls", { input: { filePath: "/tmp/project/src/ls-target.ts" } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -121,7 +134,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("custom-tool", { input: { filePath: "/tmp/project/src/custom-target.ts" } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -132,7 +145,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("read");
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -143,7 +156,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("read", { details: { truncation: { truncated: false } } });
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
@@ -154,7 +167,7 @@ describe("extractToolPaths", () => {
 		const event = toolResultEvent("write");
 
 		// when
-		const paths = extractToolPaths(event);
+		const paths = extractToolPaths(event, CWD);
 
 		// then
 		expect(paths).toEqual([]);
