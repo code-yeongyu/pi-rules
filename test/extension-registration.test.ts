@@ -6,7 +6,7 @@ import piRulesExtension from "../src/index.js";
 import { createFakePi, type FakePiHarness } from "./helpers/fake-pi.js";
 import { createTempFs, type TempFs } from "./helpers/temp-fs.js";
 
-const ORIGINAL_HOME = process.env.HOME;
+const ORIGINAL_HOME = process.env["HOME"];
 
 const tempFiles: TempFs[] = [];
 
@@ -16,16 +16,16 @@ afterEach(() => {
 	}
 
 	if (ORIGINAL_HOME === undefined) {
-		delete process.env.HOME;
+		delete process.env["HOME"];
 	} else {
-		process.env.HOME = ORIGINAL_HOME;
+		process.env["HOME"] = ORIGINAL_HOME;
 	}
 });
 
 function createIsolatedTempFs(): TempFs {
 	const tempFile = createTempFs();
 	tempFiles.push(tempFile);
-	process.env.HOME = tempFile.path("home");
+	process.env["HOME"] = tempFile.path("home");
 	tempFile.mkdir("home");
 	return tempFile;
 }

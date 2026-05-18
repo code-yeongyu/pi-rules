@@ -63,9 +63,10 @@ export function makeLoadedRule(overrides: Partial<LoadedRule> = {}): LoadedRule 
 }
 
 export function makeParsedRule(overrides: Partial<ParsedRule> = {}): ParsedRule {
-	return {
+	const parsed: ParsedRule = {
 		frontmatter: overrides.frontmatter ?? {},
 		body: overrides.body ?? "body",
-		diagnostic: overrides.diagnostic,
 	};
+	if (overrides.diagnostic !== undefined) parsed.diagnostic = overrides.diagnostic;
+	return parsed;
 }

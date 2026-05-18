@@ -11,7 +11,7 @@ import { createTempFs, type TempFs } from "../helpers/temp-fs.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_PROJECT = path.resolve(__dirname, "../fixtures/sample-project");
 const BASE_SYSTEM_PROMPT = "Base prompt.";
-const ORIGINAL_HOME = process.env.HOME;
+const ORIGINAL_HOME = process.env["HOME"];
 
 const tempFiles: TempFs[] = [];
 
@@ -19,7 +19,7 @@ beforeEach(() => {
 	const tempFile = createTempFs();
 	tempFiles.push(tempFile);
 	tempFile.mkdir("home");
-	process.env.HOME = tempFile.path("home");
+	process.env["HOME"] = tempFile.path("home");
 });
 
 afterEach(() => {
@@ -28,9 +28,9 @@ afterEach(() => {
 	}
 
 	if (ORIGINAL_HOME === undefined) {
-		delete process.env.HOME;
+		delete process.env["HOME"];
 	} else {
-		process.env.HOME = ORIGINAL_HOME;
+		process.env["HOME"] = ORIGINAL_HOME;
 	}
 });
 

@@ -88,10 +88,11 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		}
 
 		const projectRoot = deps.findProjectRoot(cwd);
+		const disabledSources = disabledSourcesFor(config);
 		const candidates = deps.findCandidates({
 			projectRoot,
 			targetFile: null,
-			disabledSources: disabledSourcesFor(config),
+			...(disabledSources === undefined ? {} : { disabledSources }),
 		});
 		const result = loadStaticCandidates(candidates, deps, projectRoot);
 		storeLastLoad(state, result.rules, result.diagnostics);
@@ -116,7 +117,11 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 
 		for (const targetFile of uniqueStrings(targetPaths)) {
 			const projectRoot = deps.findProjectRoot(targetFile);
-			const candidates = deps.findCandidates({ projectRoot, targetFile, disabledSources });
+			const candidates = deps.findCandidates({
+				projectRoot,
+				targetFile,
+				...(disabledSources === undefined ? {} : { disabledSources }),
+			});
 
 			for (const candidate of sortCandidates(candidates)) {
 				const loadedRule = loadCandidate(
@@ -300,12 +305,12 @@ function loadCandidate(
 	}
 
 	const parsed = parseRule(content);
-	const loadedContent = {
+	const loadedContent: LoadedRuleContent = {
 		frontmatter: parsed.frontmatter,
 		body: parsed.body,
 		contentHash: hashContent(parsed.body),
-		diagnostic: parsed.diagnostic,
-	} satisfies LoadedRuleContent;
+	};
+	if (parsed.diagnostic !== undefined) loadedContent.diagnostic = parsed.diagnostic;
 	loadedRuleContent?.set(candidate.realPath, loadedContent);
 	return loadedRuleFromContent(candidate, loadedContent, diagnostics);
 }

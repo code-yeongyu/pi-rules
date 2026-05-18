@@ -66,8 +66,7 @@ export interface FakePiHarness {
 	 * Handlers are chained: if a handler returns a result, that becomes the
 	 * input for the next handler.
 	 */
-	// biome-ignore lint/suspicious/noExplicitAny: ExtensionAPI handlers carry varying event payloads
-	emit(eventName: string, event: any, ctx: ExtensionContext): Promise<unknown>;
+	emit(eventName: string, event: unknown, ctx: ExtensionContext): Promise<unknown>;
 	/**
 	 * Build a stub `ExtensionContext` with the given overrides. UI methods
 	 * record into the harness; everything else is a typed no-op.
@@ -91,10 +90,9 @@ export function createFakePi(): FakePiHarness {
 	const statuses = new Map<string, CapturedStatus>();
 	const entries: Array<{ customType: string; data: unknown }> = [];
 
-	// biome-ignore lint/suspicious/noExplicitAny: ExtensionAPI uses `any` in its public hook signatures
-	const on: ExtensionAPI["on"] = (event: any, handler: any) => {
-		handlers.push({ event: String(event), handler });
-	};
+	const on = ((event: string, handler: ExtensionHandler<never, unknown>) => {
+		handlers.push({ event, handler: handler as ExtensionHandler<unknown, unknown> });
+	}) as ExtensionAPI["on"];
 	const registerTool: ExtensionAPI["registerTool"] = (definition) => {
 		tools.push({ definition: definition as ToolDefinition<TSchema, unknown, never> });
 	};
@@ -162,8 +160,7 @@ export function createFakePi(): FakePiHarness {
 	} satisfies ExtensionAPI;
 
 	function makeUiContext(): ExtensionContext["ui"] {
-		// biome-ignore lint/suspicious/noExplicitAny: pi-coding-agent ExtensionUIContext has many methods we don't need to test
-		const ui: any = {
+		const ui = {
 			notify: (message: string, severity: "info" | "warning" | "error" | "success" = "info") => {
 				notifications.push({ message, severity });
 			},
@@ -178,8 +175,8 @@ export function createFakePi(): FakePiHarness {
 				const recorded: CapturedWidget = {
 					key,
 					content: Array.isArray(content) ? content : content === undefined ? undefined : "factory",
-					options,
 				};
+				if (options !== undefined) recorded.options = options;
 				widgets.set(key, recorded);
 			},
 			setHeader: () => {},
@@ -191,12 +188,11 @@ export function createFakePi(): FakePiHarness {
 			addAutocompleteProvider: () => () => {},
 			getAutocompleteCompletions: async () => [],
 		};
-		return ui as ExtensionContext["ui"];
+		return ui as Partial<ExtensionContext["ui"]> as ExtensionContext["ui"];
 	}
 
 	function makeCtx(overrides: Partial<ExtensionContext> = {}): ExtensionContext {
-		// biome-ignore lint/suspicious/noExplicitAny: ExtensionContext has read-only fields we stub minimally
-		const base: any = {
+		const base: Record<keyof ExtensionContext, unknown> = {
 			ui: makeUiContext(),
 			hasUI: true,
 			cwd: process.cwd(),
@@ -212,12 +208,11 @@ export function createFakePi(): FakePiHarness {
 			compact: () => {},
 			getSystemPrompt: () => "",
 		};
-		return { ...(base as ExtensionContext), ...overrides };
+		return { ...base, ...overrides } as ExtensionContext;
 	}
 
 	function makeCommandCtx(overrides: Partial<ExtensionCommandContext> = {}): ExtensionCommandContext {
-		// biome-ignore lint/suspicious/noExplicitAny: ExtensionCommandContext extends ExtensionContext with extra methods we stub minimally
-		const base: any = {
+		const base = {
 			...makeCtx(),
 			waitForIdle: async () => {},
 			newSession: async () => ({ cancelled: false }),
@@ -226,7 +221,7 @@ export function createFakePi(): FakePiHarness {
 			switchSession: async () => ({ cancelled: false }),
 			reload: async () => {},
 		};
-		return { ...(base as ExtensionCommandContext), ...overrides };
+		return { ...(base as Partial<ExtensionCommandContext>), ...overrides } as ExtensionCommandContext;
 	}
 
 	async function emit(eventName: string, event: unknown, ctx: ExtensionContext): Promise<unknown> {
@@ -234,8 +229,7 @@ export function createFakePi(): FakePiHarness {
 		let lastResult: unknown;
 		for (const handler of handlers) {
 			if (handler.event !== eventName) continue;
-			// biome-ignore lint/suspicious/noExplicitAny: handler payloads vary by event type
-			const result = await Promise.resolve(handler.handler(current as any, ctx));
+			const result = await Promise.resolve(handler.handler(current as never, ctx));
 			if (result !== undefined && result !== null) {
 				lastResult = result;
 				// Chain results into next handler's event for hooks that mutate event-shaped state.

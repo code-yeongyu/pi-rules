@@ -117,7 +117,8 @@ function parseYamlFrontmatter(yamlContent: string): RuleFrontmatter {
 	}
 
 	if (globValues.length === 1) {
-		frontmatter.globs = globValues[0];
+		const singleGlob = globValues[0];
+		if (singleGlob !== undefined) frontmatter.globs = singleGlob;
 	} else if (globValues.length > 1) {
 		frontmatter.globs = globValues;
 	}
