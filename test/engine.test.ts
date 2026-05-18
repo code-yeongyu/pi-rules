@@ -551,7 +551,7 @@ describe("session state", () => {
 		const engine = createTestEngine({}, [], new Map());
 		const rule = makeRule();
 		engine.markStaticInjected(rule);
-		engine.markDynamicInjected(rule);
+		engine.markDynamicInjected("/workspace/project/src/app.ts", rule);
 
 		// when
 		engine.resetSession("/workspace/other");
@@ -588,14 +588,15 @@ describe("session state", () => {
 		expect(engine.isStaticInjected(rule)).toBe(true);
 	});
 
-	it("#given markDynamicInjected for same rule twice #when both called #then second returns false", () => {
+	it("#given markDynamicInjected for same rule and target path twice #when both called #then second returns false", () => {
 		// given
 		const engine = createTestEngine({}, [], new Map());
+		const scopeKey = "/workspace/project/src/app.ts";
 		const rule = makeRule();
 
 		// when
-		const firstResult = engine.markDynamicInjected(rule);
-		const secondResult = engine.markDynamicInjected(rule);
+		const firstResult = engine.markDynamicInjected(scopeKey, rule);
+		const secondResult = engine.markDynamicInjected(scopeKey, rule);
 
 		// then
 		expect(firstResult).toBe(true);

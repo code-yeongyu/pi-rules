@@ -118,10 +118,11 @@ describe("markDynamicInjected", () => {
 	it("#given fresh state #when marking dynamic injected first time #then returns true", () => {
 		// given
 		const state = createSessionState();
+		const scopeKey = "/workspace/project/src/app.ts";
 		const rule = makeLoadedRule();
 
 		// when
-		const result = markDynamicInjected(state, rule);
+		const result = markDynamicInjected(state, scopeKey, rule);
 
 		// then
 		expect(result).toBe(true);
@@ -130,29 +131,30 @@ describe("markDynamicInjected", () => {
 	it("#given marked rule #when marking dynamic injected again same rule #then returns false", () => {
 		// given
 		const state = createSessionState();
+		const scopeKey = "/workspace/project/src/app.ts";
 		const rule = makeLoadedRule();
 
 		// when
-		const firstResult = markDynamicInjected(state, rule);
-		const secondResult = markDynamicInjected(state, rule);
+		const firstResult = markDynamicInjected(state, scopeKey, rule);
+		const secondResult = markDynamicInjected(state, scopeKey, rule);
 
 		// then
 		expect(firstResult).toBe(true);
 		expect(secondResult).toBe(false);
 	});
 
-	it("#given marked dynamic rule #when marking same rule again #then returns false (session dedup)", () => {
+	it("#given marked dynamic rule #when marking same rule for a different target path #then returns true", () => {
 		// given
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 
 		// when
-		const firstResult = markDynamicInjected(state, rule);
-		const secondResult = markDynamicInjected(state, rule);
+		const firstResult = markDynamicInjected(state, "/workspace/project/src/app.ts", rule);
+		const secondResult = markDynamicInjected(state, "/workspace/project/src/api.ts", rule);
 
 		// then
 		expect(firstResult).toBe(true);
-		expect(secondResult).toBe(false);
+		expect(secondResult).toBe(true);
 	});
 });
 
@@ -160,11 +162,12 @@ describe("isInjected", () => {
 	it("#given marked dynamic #when isDynamicInjected #then true", () => {
 		// given
 		const state = createSessionState();
+		const scopeKey = "/workspace/project/src/app.ts";
 		const rule = makeLoadedRule();
-		markDynamicInjected(state, rule);
+		markDynamicInjected(state, scopeKey, rule);
 
 		// when
-		const result = isDynamicInjected(state, rule);
+		const result = isDynamicInjected(state, scopeKey, rule);
 
 		// then
 		expect(result).toBe(true);
@@ -190,7 +193,7 @@ describe("clearSession", () => {
 		const state = createSessionState();
 		const rule = makeLoadedRule();
 		markStaticInjected(state, rule);
-		markDynamicInjected(state, rule);
+		markDynamicInjected(state, "/workspace/project/src/app.ts", rule);
 		state.loadedRules.push(rule);
 		state.diagnostics.push({ severity: "warning", source: rule.realPath, message: "diagnostic" });
 
@@ -235,15 +238,16 @@ describe("dedup keys", () => {
 
 	it("#given dynamicDedupKey #when same args #then deterministic", () => {
 		// given
+		const scopeKey = "/workspace/project/src/app.ts";
 		const rulePath = "/workspace/project/AGENTS.md";
 		const contentHash = "hash";
 
 		// when
-		const firstKey = dynamicDedupKey(rulePath, contentHash);
-		const secondKey = dynamicDedupKey(rulePath, contentHash);
+		const firstKey = dynamicDedupKey(scopeKey, rulePath, contentHash);
+		const secondKey = dynamicDedupKey(scopeKey, rulePath, contentHash);
 
 		// then
-		expect(firstKey).toBe("/workspace/project/AGENTS.md::hash");
+		expect(firstKey).toBe("/workspace/project/src/app.ts::/workspace/project/AGENTS.md::hash");
 		expect(secondKey).toBe(firstKey);
 	});
 });

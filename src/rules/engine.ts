@@ -56,9 +56,9 @@ export interface Engine {
 	formatDynamic(rules: ReadonlyArray<LoadedRule>, target: string): string;
 	resetSession(cwd?: string): void;
 	isStaticInjected(rule: LoadedRule): boolean;
-	isDynamicInjected(rule: LoadedRule): boolean;
+	isDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
 	markStaticInjected(rule: LoadedRule): boolean;
-	markDynamicInjected(rule: LoadedRule): boolean;
+	markDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
 }
 
 const ROOT_SINGLE_FILE_SOURCES = new Set(PROJECT_SINGLE_FILES.filter((source) => !source.includes("/")));
@@ -170,9 +170,9 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			}
 		},
 		isStaticInjected: (rule) => isStaticInjectedInState(state, rule),
-		isDynamicInjected: (rule) => isDynamicInjectedInState(state, rule),
+		isDynamicInjected: (scopeKey, rule) => isDynamicInjectedInState(state, scopeKey, rule),
 		markStaticInjected: (rule) => markStaticInjectedInState(state, rule),
-		markDynamicInjected: (rule) => markDynamicInjectedInState(state, rule),
+		markDynamicInjected: (scopeKey, rule) => markDynamicInjectedInState(state, scopeKey, rule),
 	};
 }
 

@@ -116,14 +116,16 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		}
 
 		const loaded = engine.loadDynamicRules(ctx.cwd, targetPaths);
-		const rules = loaded.rules.filter((rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(rule));
+		const rules = loaded.rules.filter(
+			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(firstTargetPath, rule),
+		);
 		if (rules.length === 0) {
 			return undefined;
 		}
 
 		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstTargetPath));
 		for (const rule of rules) {
-			engine.markDynamicInjected(rule);
+			engine.markDynamicInjected(firstTargetPath, rule);
 		}
 
 		return { content: [...event.content, { type: "text", text: block }] };
