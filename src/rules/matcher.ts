@@ -14,6 +14,21 @@ export interface MatchResult {
 	reason: MatchReason;
 }
 
+interface CompiledPatternSet {
+	positiveMatchers: ReadonlyArray<{ pattern: string; isMatch: PathMatcher }>;
+	negativeMatchers: ReadonlyArray<PathMatcher>;
+}
+
+export interface MatcherCacheStats {
+	entries: number;
+	compiledPatterns: number;
+}
+
+type PathMatcher = (path: string) => boolean;
+
+const PICOMATCH_OPTIONS = { bash: true, dot: true };
+const compiledPatternSets = new Map<string, CompiledPatternSet>();
+
 export function matchRule(input: MatcherInput): MatchResult {
 	if (input.isSingleFile) {
 		return { matched: true, reason: "single-file" };
@@ -34,13 +49,9 @@ export function matchRule(input: MatcherInput): MatchResult {
 		normalizePath(input.pathBases.basename),
 	].filter((pathBase): pathBase is string => pathBase !== undefined);
 
-	const positivePatterns = patterns.filter((pattern) => !pattern.startsWith("!"));
-	const negativePatterns = patterns.filter((pattern) => pattern.startsWith("!"));
-	const negativeMatchers = negativePatterns.map((pattern) => picomatch(pattern.slice(1), { bash: true, dot: true }));
+	const { positiveMatchers, negativeMatchers } = compiledPatternSetFor(patterns);
 
-	for (const pattern of positivePatterns) {
-		const isMatch = picomatch(pattern, { bash: true, dot: true });
-
+	for (const { pattern, isMatch } of positiveMatchers) {
 		for (const pathBase of pathBases) {
 			if (!isMatch(pathBase)) {
 				continue;
@@ -69,6 +80,42 @@ export function normalizeGlobs(frontmatter: RuleFrontmatter): string[] {
 
 export function hashContent(body: string): string {
 	return createHash("sha256").update(body).digest("hex");
+}
+
+export function resetMatcherCache(): void {
+	compiledPatternSets.clear();
+}
+
+export function getMatcherCacheStats(): MatcherCacheStats {
+	let compiledPatterns = 0;
+	for (const patternSet of compiledPatternSets.values()) {
+		compiledPatterns += patternSet.positiveMatchers.length + patternSet.negativeMatchers.length;
+	}
+
+	return { entries: compiledPatternSets.size, compiledPatterns };
+}
+
+function compiledPatternSetFor(patterns: ReadonlyArray<string>): CompiledPatternSet {
+	const cacheKey = patterns.join("\0");
+	const cached = compiledPatternSets.get(cacheKey);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const positiveMatchers: Array<{ pattern: string; isMatch: PathMatcher }> = [];
+	const negativeMatchers: PathMatcher[] = [];
+	for (const pattern of patterns) {
+		if (pattern.startsWith("!")) {
+			negativeMatchers.push(picomatch(pattern.slice(1), PICOMATCH_OPTIONS));
+			continue;
+		}
+
+		positiveMatchers.push({ pattern, isMatch: picomatch(pattern, PICOMATCH_OPTIONS) });
+	}
+
+	const compiledPatternSet = { positiveMatchers, negativeMatchers } satisfies CompiledPatternSet;
+	compiledPatternSets.set(cacheKey, compiledPatternSet);
+	return compiledPatternSet;
 }
 
 function normalizePatternList(patterns: string | string[] | undefined): string[] {
