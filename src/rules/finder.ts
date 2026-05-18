@@ -13,6 +13,16 @@ import { UnsupportedRuleSourceError } from "./errors.js";
 import { scanRuleFiles } from "./scanner.js";
 import type { RuleCandidate, RuleSource } from "./types.js";
 
+interface SingleFileInfo {
+	path: string;
+	realPath: string;
+}
+
+export interface RuleDiscoveryCache {
+	scannedRuleFiles: Map<string, ReturnType<typeof scanRuleFiles>>;
+	singleFileInfo: Map<string, SingleFileInfo | null>;
+}
+
 export interface FinderOptions {
 	/** Project root absolute path (use findProjectRoot to get this). */
 	projectRoot: string | null;
@@ -24,11 +34,16 @@ export interface FinderOptions {
 	disabledSources?: ReadonlySet<string>;
 	/** Whether to skip user-home rules. Default: false. */
 	skipUserHome?: boolean;
+	cache?: RuleDiscoveryCache;
 }
 
 interface WalkDirectory {
 	directory: string;
 	distance: number;
+}
+
+export function createRuleDiscoveryCache(): RuleDiscoveryCache {
+	return { scannedRuleFiles: new Map(), singleFileInfo: new Map() };
 }
 
 export function findRuleCandidates(options: FinderOptions): RuleCandidate[] {
@@ -42,11 +57,13 @@ export function findRuleCandidates(options: FinderOptions): RuleCandidate[] {
 	const homeDirectory = resolve(options.homeDir ?? homedir());
 
 	if (options.projectRoot !== null) {
-		candidates.push(...findProjectCandidates(options.projectRoot, options.targetFile, disabledSources));
+		candidates.push(
+			...findProjectCandidates(options.projectRoot, options.targetFile, disabledSources, options.cache),
+		);
 	}
 
 	if (!skipUserHome) {
-		candidates.push(...findUserHomeCandidates(homeDirectory, disabledSources));
+		candidates.push(...findUserHomeCandidates(homeDirectory, disabledSources, options.cache));
 	}
 
 	return candidates;
@@ -56,6 +73,7 @@ function findProjectCandidates(
 	projectRoot: string,
 	targetFile: string | null,
 	disabledSources: ReadonlySet<string>,
+	cache: RuleDiscoveryCache | undefined,
 ): RuleCandidate[] {
 	const rootDirectory = resolve(projectRoot);
 	const walkDirectories = getWalkDirectories(rootDirectory, targetFile);
@@ -69,7 +87,7 @@ function findProjectCandidates(
 			}
 
 			const ruleDirectory = join(walkDirectory.directory, parentDirectory, subDirectory);
-			for (const scannedFile of scanRuleFiles({ rootDir: ruleDirectory })) {
+			for (const scannedFile of scanRuleFilesCached(ruleDirectory, cache)) {
 				candidates.push({
 					path: scannedFile.path,
 					realPath: resolveRealPath(scannedFile.path),
@@ -91,13 +109,14 @@ function findProjectCandidates(
 			}
 
 			const filePath = join(walkDirectory.directory, ruleFile);
-			if (!isFile(filePath)) {
+			const fileInfo = singleFileInfoCached(filePath, cache);
+			if (fileInfo === null) {
 				continue;
 			}
 
 			candidates.push({
-				path: filePath,
-				realPath: resolveRealPath(filePath),
+				path: fileInfo.path,
+				realPath: fileInfo.realPath,
 				source,
 				distance: targetFile === null ? 0 : walkDirectory.distance,
 				isGlobal: false,
@@ -110,7 +129,11 @@ function findProjectCandidates(
 	return candidates;
 }
 
-function findUserHomeCandidates(homeDirectory: string, disabledSources: ReadonlySet<string>): RuleCandidate[] {
+function findUserHomeCandidates(
+	homeDirectory: string,
+	disabledSources: ReadonlySet<string>,
+	cache: RuleDiscoveryCache | undefined,
+): RuleCandidate[] {
 	const candidates: RuleCandidate[] = [];
 
 	for (const ruleSubdir of USER_HOME_RULE_SUBDIRS) {
@@ -120,7 +143,7 @@ function findUserHomeCandidates(homeDirectory: string, disabledSources: Readonly
 		}
 
 		const ruleDirectory = join(homeDirectory, ruleSubdir);
-		for (const scannedFile of scanRuleFiles({ rootDir: ruleDirectory })) {
+		for (const scannedFile of scanRuleFilesCached(ruleDirectory, cache)) {
 			candidates.push({
 				path: scannedFile.path,
 				realPath: resolveRealPath(scannedFile.path),
@@ -140,13 +163,14 @@ function findUserHomeCandidates(homeDirectory: string, disabledSources: Readonly
 		}
 
 		const filePath = join(homeDirectory, ruleFile);
-		if (!isFile(filePath)) {
+		const fileInfo = singleFileInfoCached(filePath, cache);
+		if (fileInfo === null) {
 			continue;
 		}
 
 		candidates.push({
-			path: filePath,
-			realPath: resolveRealPath(filePath),
+			path: fileInfo.path,
+			realPath: fileInfo.realPath,
 			source,
 			distance: GLOBAL_DISTANCE,
 			isGlobal: true,
@@ -156,6 +180,36 @@ function findUserHomeCandidates(homeDirectory: string, disabledSources: Readonly
 	}
 
 	return candidates;
+}
+
+function scanRuleFilesCached(rootDir: string, cache: RuleDiscoveryCache | undefined): ReturnType<typeof scanRuleFiles> {
+	if (cache === undefined) {
+		return scanRuleFiles({ rootDir });
+	}
+
+	const cached = cache.scannedRuleFiles.get(rootDir);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const scannedFiles = scanRuleFiles({ rootDir });
+	cache.scannedRuleFiles.set(rootDir, scannedFiles);
+	return scannedFiles;
+}
+
+function singleFileInfoCached(filePath: string, cache: RuleDiscoveryCache | undefined): SingleFileInfo | null {
+	if (cache === undefined) {
+		return readSingleFileInfo(filePath);
+	}
+
+	const cached = cache.singleFileInfo.get(filePath);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const fileInfo = readSingleFileInfo(filePath);
+	cache.singleFileInfo.set(filePath, fileInfo);
+	return fileInfo;
 }
 
 function getWalkDirectories(projectRoot: string, targetFile: string | null): WalkDirectory[] {
@@ -195,16 +249,23 @@ function isSameOrChildPath(childPath: string, parentPath: string): boolean {
 	return childRelativePath === "" || (!childRelativePath.startsWith("..") && !childRelativePath.startsWith("/"));
 }
 
-function isFile(filePath: string): boolean {
+function readSingleFileInfo(filePath: string): SingleFileInfo | null {
 	if (!existsSync(filePath)) {
-		return false;
+		return null;
 	}
 
 	try {
-		return statSync(filePath).isFile();
+		if (!statSync(filePath).isFile()) {
+			return null;
+		}
 	} catch {
-		return false;
+		return null;
 	}
+
+	return {
+		path: filePath,
+		realPath: resolveRealPath(filePath),
+	};
 }
 
 function resolveRealPath(filePath: string): string {

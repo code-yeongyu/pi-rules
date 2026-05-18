@@ -1,3 +1,4 @@
+import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
@@ -16,6 +17,7 @@ import {
 	PROJECT_SINGLE_FILES,
 	SOURCE_PRIORITY,
 } from "./constants.js";
+import { createRuleDiscoveryCache, type RuleDiscoveryCache } from "./finder.js";
 import { formatDynamicBlock, formatStaticBlock } from "./formatter.js";
 import { hashContent, matchRule } from "./matcher.js";
 import { sortCandidates } from "./ordering.js";
@@ -29,8 +31,16 @@ interface LoadedRuleContent {
 	diagnostic?: string;
 }
 
+interface LoadCandidateCaches {
+	readonly loadedRuleContent?: Map<string, LoadedRuleContent | null>;
+	readonly projectMembership?: CandidateProjectMembership;
+	readonly realPathCache?: RealPathCache;
+}
+
 type CandidateProjectMembership = Map<string, boolean>;
+type CandidateDiscoveryCache = Map<string, RuleCandidate[]>;
 type DynamicMatchCache = Map<string, MatchReason | null>;
+type RealPathCache = Map<string, string>;
 
 const MAX_DYNAMIC_MATCH_CACHE_ENTRIES = 4096;
 
@@ -41,6 +51,7 @@ export interface EngineDeps {
 		homeDir?: string;
 		disabledSources?: ReadonlySet<string>;
 		skipUserHome?: boolean;
+		cache?: RuleDiscoveryCache;
 	}) => RuleCandidate[];
 	readFile: (path: string) => string | null;
 	findProjectRoot: (startPath: string) => string | null;
@@ -94,7 +105,8 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			targetFile: null,
 			...(disabledSources === undefined ? {} : { disabledSources }),
 		});
-		const result = loadStaticCandidates(candidates, deps, projectRoot);
+		const realPathCache: RealPathCache = new Map();
+		const result = loadStaticCandidates(candidates, deps, projectRoot, realPathCache);
 		storeLastLoad(state, result.rules, result.diagnostics);
 		return result;
 	}
@@ -108,30 +120,39 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			return emptyLoadResult(state);
 		}
 
+		const targetFiles = uniqueStrings(targetPaths);
+		const shouldCacheLookups = targetFiles.length > 1;
 		const rules: LoadedRule[] = [];
 		const diagnostics: RuleDiagnostic[] = [];
 		const seenRules = new Set<string>();
 		const loadedRuleContent = new Map<string, LoadedRuleContent | null>();
 		const projectMembership = new Map<string, boolean>();
 		const disabledSources = disabledSourcesFor(config);
+		const discoveryCache = shouldCacheLookups ? createRuleDiscoveryCache() : undefined;
+		const candidateDiscoveryCache: CandidateDiscoveryCache = new Map();
+		const projectRootCache = new Map<string, string | null>();
+		const realPathCache: RealPathCache = new Map();
 
-		for (const targetFile of uniqueStrings(targetPaths)) {
-			const projectRoot = deps.findProjectRoot(targetFile);
-			const candidates = deps.findCandidates({
+		for (const targetFile of targetFiles) {
+			const projectRoot = shouldCacheLookups
+				? findProjectRootCached(projectRootCache, targetFile, deps.findProjectRoot)
+				: deps.findProjectRoot(targetFile);
+			const findOptions: Parameters<EngineDeps["findCandidates"]>[0] = {
 				projectRoot,
 				targetFile,
+				...(discoveryCache === undefined ? {} : { cache: discoveryCache }),
 				...(disabledSources === undefined ? {} : { disabledSources }),
-			});
+			};
+			const candidates = shouldCacheLookups
+				? findSortedCandidatesCached(candidateDiscoveryCache, deps.findCandidates, findOptions)
+				: sortCandidates(deps.findCandidates(findOptions));
 
-			for (const candidate of sortCandidates(candidates)) {
-				const loadedRule = loadCandidate(
-					candidate,
-					deps,
-					diagnostics,
-					projectRoot,
+			for (const candidate of candidates) {
+				const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot, {
 					loadedRuleContent,
 					projectMembership,
-				);
+					realPathCache,
+				});
 				if (loadedRule === null) {
 					continue;
 				}
@@ -245,7 +266,12 @@ function dynamicMatchCacheKey(
 	].join("\0");
 }
 
-function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: EngineDeps, projectRoot: string | null) {
+function loadStaticCandidates(
+	candidates: ReadonlyArray<RuleCandidate>,
+	deps: EngineDeps,
+	projectRoot: string | null,
+	realPathCache: RealPathCache,
+) {
 	const rules: LoadedRule[] = [];
 	const diagnostics: RuleDiagnostic[] = [];
 	let rootSingleFileSelected = false;
@@ -255,7 +281,7 @@ function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: En
 			continue;
 		}
 
-		const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot);
+		const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot, { realPathCache });
 		if (loadedRule === null) {
 			continue;
 		}
@@ -280,10 +306,9 @@ function loadCandidate(
 	deps: EngineDeps,
 	diagnostics: RuleDiagnostic[],
 	projectRoot: string | null,
-	loadedRuleContent?: Map<string, LoadedRuleContent | null>,
-	projectMembership?: CandidateProjectMembership,
+	caches: LoadCandidateCaches,
 ): (LoadedRule & { matchReason: MatchReason }) | null {
-	if (!isCandidateWithinProjectCached(candidate, projectRoot, projectMembership)) {
+	if (!isCandidateWithinProjectCached(candidate, projectRoot, caches.projectMembership, caches.realPathCache)) {
 		diagnostics.push({
 			severity: "warning",
 			source: candidate.path,
@@ -292,14 +317,14 @@ function loadCandidate(
 		return null;
 	}
 
-	const cachedContent = loadedRuleContent?.get(candidate.realPath);
+	const cachedContent = caches.loadedRuleContent?.get(candidate.realPath);
 	if (cachedContent !== undefined) {
 		return loadedRuleFromContent(candidate, cachedContent, diagnostics);
 	}
 
 	const content = deps.readFile(candidate.path);
 	if (content === null) {
-		loadedRuleContent?.set(candidate.realPath, null);
+		caches.loadedRuleContent?.set(candidate.realPath, null);
 		diagnostics.push({ severity: "warning", source: candidate.path, message: "Unable to read rule file" });
 		return null;
 	}
@@ -308,10 +333,10 @@ function loadCandidate(
 	const loadedContent: LoadedRuleContent = {
 		frontmatter: parsed.frontmatter,
 		body: parsed.body,
-		contentHash: hashContent(parsed.body),
+		contentHash: hashContent(content),
 	};
 	if (parsed.diagnostic !== undefined) loadedContent.diagnostic = parsed.diagnostic;
-	loadedRuleContent?.set(candidate.realPath, loadedContent);
+	caches.loadedRuleContent?.set(candidate.realPath, loadedContent);
 	return loadedRuleFromContent(candidate, loadedContent, diagnostics);
 }
 
@@ -342,7 +367,11 @@ function ruleDedupKey(rule: LoadedRule): string {
 	return `${rule.realPath}::${rule.contentHash}`;
 }
 
-function isCandidateWithinProject(candidate: RuleCandidate, projectRoot: string | null): boolean {
+function isCandidateWithinProject(
+	candidate: RuleCandidate,
+	projectRoot: string | null,
+	realPathCache: RealPathCache | undefined,
+): boolean {
 	if (candidate.isGlobal) {
 		return true;
 	}
@@ -351,17 +380,35 @@ function isCandidateWithinProject(candidate: RuleCandidate, projectRoot: string 
 		return false;
 	}
 
-	const relativeRealPath = relative(resolve(projectRoot), resolve(candidate.realPath));
+	const relativeRealPath = relative(realPathOrResolved(projectRoot, realPathCache), resolve(candidate.realPath));
 	return relativeRealPath === "" || (!relativeRealPath.startsWith("..") && !isAbsolute(relativeRealPath));
+}
+
+function realPathOrResolved(path: string, cache: RealPathCache | undefined): string {
+	const cached = cache?.get(path);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	try {
+		const realPath = realpathSync.native(path);
+		cache?.set(path, realPath);
+		return realPath;
+	} catch {
+		const resolvedPath = resolve(path);
+		cache?.set(path, resolvedPath);
+		return resolvedPath;
+	}
 }
 
 function isCandidateWithinProjectCached(
 	candidate: RuleCandidate,
 	projectRoot: string | null,
 	projectMembership: CandidateProjectMembership | undefined,
+	realPathCache: RealPathCache | undefined,
 ): boolean {
 	if (projectMembership === undefined) {
-		return isCandidateWithinProject(candidate, projectRoot);
+		return isCandidateWithinProject(candidate, projectRoot, realPathCache);
 	}
 
 	const cacheKey = `${projectRoot ?? ""}\0${candidate.realPath}`;
@@ -370,9 +417,48 @@ function isCandidateWithinProjectCached(
 		return cached;
 	}
 
-	const isWithinProject = isCandidateWithinProject(candidate, projectRoot);
+	const isWithinProject = isCandidateWithinProject(candidate, projectRoot, realPathCache);
 	projectMembership.set(cacheKey, isWithinProject);
 	return isWithinProject;
+}
+
+function findSortedCandidatesCached(
+	cache: CandidateDiscoveryCache,
+	findCandidates: EngineDeps["findCandidates"],
+	options: Parameters<EngineDeps["findCandidates"]>[0],
+): RuleCandidate[] {
+	const cacheKey = candidateDiscoveryCacheKey(options);
+	const cached = cache.get(cacheKey);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const candidates = sortCandidates(findCandidates(options));
+	cache.set(cacheKey, candidates);
+	return candidates;
+}
+
+function candidateDiscoveryCacheKey(options: Parameters<EngineDeps["findCandidates"]>[0]): string {
+	return [
+		options.projectRoot ?? "",
+		options.targetFile === null ? "" : dirname(resolve(options.targetFile)),
+		...[...(options.disabledSources ?? [])].sort(),
+	].join("\0");
+}
+
+function findProjectRootCached(
+	cache: Map<string, string | null>,
+	targetFile: string,
+	findProjectRoot: EngineDeps["findProjectRoot"],
+): string | null {
+	const cacheKey = dirname(resolve(targetFile));
+	if (cache.has(cacheKey)) {
+		return cache.get(cacheKey) ?? null;
+	}
+
+	const projectRoot = findProjectRoot(targetFile);
+	cache.set(cacheKey, projectRoot);
+	return projectRoot;
 }
 
 function staticMatchReason(rule: LoadedRule): MatchReason | null {
