@@ -445,6 +445,48 @@ describe("loadDynamicRules", () => {
 		expect(result.rules).toHaveLength(1);
 		expect(result.rules[0]?.path).toBe(candidate.path);
 	});
+
+	it("#given duplicate target paths #when loadDynamicRules #then repeated discovery and parsing work is avoided", () => {
+		// given
+		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			relativePath: ".sisyphus/rules/typescript.md",
+		});
+		const counters = {
+			findProjectRoot: 0,
+			findCandidates: 0,
+			readFile: 0,
+		};
+		const deps = {
+			findProjectRoot: () => {
+				counters.findProjectRoot += 1;
+				return PROJECT_ROOT;
+			},
+			findCandidates: () => {
+				counters.findCandidates += 1;
+				return [candidate];
+			},
+			readFile: () => {
+				counters.readFile += 1;
+				return ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule.");
+			},
+			extractToolPaths: () => [],
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const result = engine.loadDynamicRules(PROJECT_ROOT, [targetPath, targetPath, targetPath]);
+
+		// then
+		expect(result.rules).toHaveLength(1);
+		expect(counters).toEqual({
+			findProjectRoot: 1,
+			findCandidates: 1,
+			readFile: 1,
+		});
+	});
 });
 
 describe("formatting", () => {
