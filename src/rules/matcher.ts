@@ -27,6 +27,7 @@ export interface MatcherCacheStats {
 type PathMatcher = (path: string) => boolean;
 
 const PICOMATCH_OPTIONS = { bash: true, dot: true };
+const MAX_COMPILED_PATTERN_SET_CACHE_ENTRIES = 256;
 const compiledPatternSets = new Map<string, CompiledPatternSet>();
 
 export function matchRule(input: MatcherInput): MatchResult {
@@ -99,6 +100,8 @@ function compiledPatternSetFor(patterns: ReadonlyArray<string>): CompiledPattern
 	const cacheKey = patterns.join("\0");
 	const cached = compiledPatternSets.get(cacheKey);
 	if (cached !== undefined) {
+		compiledPatternSets.delete(cacheKey);
+		compiledPatternSets.set(cacheKey, cached);
 		return cached;
 	}
 
@@ -114,8 +117,18 @@ function compiledPatternSetFor(patterns: ReadonlyArray<string>): CompiledPattern
 	}
 
 	const compiledPatternSet = { positiveMatchers, negativeMatchers } satisfies CompiledPatternSet;
-	compiledPatternSets.set(cacheKey, compiledPatternSet);
+	setCompiledPatternSet(cacheKey, compiledPatternSet);
 	return compiledPatternSet;
+}
+
+function setCompiledPatternSet(cacheKey: string, compiledPatternSet: CompiledPatternSet): void {
+	if (compiledPatternSets.size >= MAX_COMPILED_PATTERN_SET_CACHE_ENTRIES) {
+		const oldestCacheKey = compiledPatternSets.keys().next().value;
+		if (oldestCacheKey !== undefined) {
+			compiledPatternSets.delete(oldestCacheKey);
+		}
+	}
+	compiledPatternSets.set(cacheKey, compiledPatternSet);
 }
 
 function normalizePatternList(patterns: string | string[] | undefined): string[] {

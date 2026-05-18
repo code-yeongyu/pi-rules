@@ -35,6 +35,23 @@ describe("matchRule", () => {
 		expect(getMatcherCacheStats()).toEqual({ entries: 1, compiledPatterns: 2 });
 	});
 
+	it("#given many unique glob sets #when matching repeatedly #then matcher cache stays bounded", () => {
+		// given
+		resetMatcherCache();
+
+		// when
+		for (let index = 0; index < 300; index += 1) {
+			matchRule({
+				frontmatter: { globs: `src/file-${index}.ts` },
+				isSingleFile: false,
+				pathBases: { projectRelative: `src/file-${index}.ts`, basename: `file-${index}.ts` },
+			});
+		}
+
+		// then
+		expect(getMatcherCacheStats().entries).toBeLessThanOrEqual(256);
+	});
+
 	it("#given single-file rule #when matching any path bases #then always matches with single-file reason", () => {
 		// given
 		const frontmatter: RuleFrontmatter = { globs: "never-matches" };
