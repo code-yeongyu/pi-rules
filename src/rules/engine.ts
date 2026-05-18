@@ -22,6 +22,18 @@ import { sortCandidates } from "./ordering.js";
 import { parseRule } from "./parser.js";
 import type { LoadedRule, MatchReason, PiRulesConfig, RuleCandidate, RuleDiagnostic, SessionState } from "./types.js";
 
+interface LoadedRuleContent {
+	frontmatter: LoadedRule["frontmatter"];
+	body: string;
+	contentHash: string;
+	diagnostic?: string;
+}
+
+type CandidateProjectMembership = Map<string, boolean>;
+type DynamicMatchCache = Map<string, MatchReason | null>;
+
+const MAX_DYNAMIC_MATCH_CACHE_ENTRIES = 4096;
+
 export interface EngineDeps {
 	findCandidates: (options: {
 		projectRoot: string | null;
@@ -33,6 +45,7 @@ export interface EngineDeps {
 	readFile: (path: string) => string | null;
 	findProjectRoot: (startPath: string) => string | null;
 	extractToolPaths: (event: ToolResultEvent, cwd: string) => string[];
+	matchRule?: typeof matchRule;
 }
 
 export interface Engine {
@@ -47,9 +60,9 @@ export interface Engine {
 	formatDynamic(rules: ReadonlyArray<LoadedRule>, target: string): string;
 	resetSession(cwd?: string): void;
 	isStaticInjected(rule: LoadedRule): boolean;
-	isDynamicInjected(rule: LoadedRule): boolean;
+	isDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
 	markStaticInjected(rule: LoadedRule): boolean;
-	markDynamicInjected(rule: LoadedRule): boolean;
+	markDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
 }
 
 const ROOT_SINGLE_FILE_SOURCES = new Set(PROJECT_SINGLE_FILES.filter((source) => !source.includes("/")));
@@ -66,6 +79,7 @@ export function defaultConfig(): PiRulesConfig {
 
 export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 	const state = createSessionState();
+	const dynamicMatchCache: DynamicMatchCache = new Map();
 
 	function loadStaticRules(cwd: string): { rules: LoadedRule[]; diagnostics: RuleDiagnostic[] } {
 		state.cwd = cwd;
@@ -96,25 +110,37 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const rules: LoadedRule[] = [];
 		const diagnostics: RuleDiagnostic[] = [];
 		const seenRules = new Set<string>();
+		const loadedRuleContent = new Map<string, LoadedRuleContent | null>();
+		const projectMembership = new Map<string, boolean>();
 		const disabledSources = disabledSourcesFor(config);
 
-		for (const targetFile of targetPaths) {
+		for (const targetFile of uniqueStrings(targetPaths)) {
 			const projectRoot = deps.findProjectRoot(targetFile);
 			const candidates = deps.findCandidates({ projectRoot, targetFile, disabledSources });
 
 			for (const candidate of sortCandidates(candidates)) {
-				const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot);
+				const loadedRule = loadCandidate(
+					candidate,
+					deps,
+					diagnostics,
+					projectRoot,
+					loadedRuleContent,
+					projectMembership,
+				);
 				if (loadedRule === null) {
 					continue;
 				}
 
-				const matchResult = matchRule({
-					frontmatter: loadedRule.frontmatter,
-					isSingleFile: candidate.isSingleFile,
-					pathBases: pathBasesForTarget(projectRoot, targetFile, candidate),
-				});
+				const matchReason = matchDynamicRuleCached(
+					dynamicMatchCache,
+					projectRoot,
+					targetFile,
+					candidate,
+					loadedRule,
+					deps.matchRule ?? matchRule,
+				);
 
-				if (!matchResult.matched) {
+				if (matchReason === null) {
 					continue;
 				}
 
@@ -124,7 +150,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 				}
 
 				seenRules.add(dedupKey);
-				rules.push({ ...loadedRule, matchReason: matchResult.reason });
+				rules.push({ ...loadedRule, matchReason });
 			}
 		}
 
@@ -147,15 +173,71 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			}),
 		resetSession: (cwd) => {
 			clearSession(state);
+			dynamicMatchCache.clear();
 			if (cwd !== undefined) {
 				state.cwd = cwd;
 			}
 		},
 		isStaticInjected: (rule) => isStaticInjectedInState(state, rule),
-		isDynamicInjected: (rule) => isDynamicInjectedInState(state, rule),
+		isDynamicInjected: (scopeKey, rule) => isDynamicInjectedInState(state, scopeKey, rule),
 		markStaticInjected: (rule) => markStaticInjectedInState(state, rule),
-		markDynamicInjected: (rule) => markDynamicInjectedInState(state, rule),
+		markDynamicInjected: (scopeKey, rule) => markDynamicInjectedInState(state, scopeKey, rule),
 	};
+}
+
+function matchDynamicRuleCached(
+	cache: DynamicMatchCache,
+	projectRoot: string | null,
+	targetFile: string,
+	candidate: RuleCandidate,
+	loadedRule: LoadedRule,
+	matchRuleImpl: typeof matchRule,
+): MatchReason | null {
+	const cacheKey = dynamicMatchCacheKey(projectRoot, targetFile, candidate, loadedRule.contentHash);
+	if (cache.has(cacheKey)) {
+		const cachedReason = cache.get(cacheKey) ?? null;
+		cache.delete(cacheKey);
+		cache.set(cacheKey, cachedReason);
+		return cachedReason;
+	}
+
+	const matchResult = matchRuleImpl({
+		frontmatter: loadedRule.frontmatter,
+		isSingleFile: candidate.isSingleFile,
+		pathBases: pathBasesForTarget(projectRoot, targetFile, candidate),
+	});
+	const reason = matchResult.matched ? matchResult.reason : null;
+	setDynamicMatchCacheEntry(cache, cacheKey, reason);
+	return reason;
+}
+
+function setDynamicMatchCacheEntry(cache: DynamicMatchCache, cacheKey: string, reason: MatchReason | null): void {
+	if (cache.size >= MAX_DYNAMIC_MATCH_CACHE_ENTRIES) {
+		const oldestCacheKey = cache.keys().next().value;
+		if (oldestCacheKey !== undefined) {
+			cache.delete(oldestCacheKey);
+		}
+	}
+	cache.set(cacheKey, reason);
+}
+
+function dynamicMatchCacheKey(
+	projectRoot: string | null,
+	targetFile: string,
+	candidate: RuleCandidate,
+	contentHash: string,
+): string {
+	return [
+		projectRoot ?? "",
+		toPosixPath(resolve(targetFile)),
+		candidate.realPath,
+		candidate.relativePath,
+		candidate.source,
+		candidate.isGlobal ? "global" : "project",
+		candidate.isSingleFile ? "single" : "multi",
+		String(candidate.distance),
+		contentHash,
+	].join("\0");
 }
 
 function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: EngineDeps, projectRoot: string | null) {
@@ -193,8 +275,10 @@ function loadCandidate(
 	deps: EngineDeps,
 	diagnostics: RuleDiagnostic[],
 	projectRoot: string | null,
+	loadedRuleContent?: Map<string, LoadedRuleContent | null>,
+	projectMembership?: CandidateProjectMembership,
 ): (LoadedRule & { matchReason: MatchReason }) | null {
-	if (!isCandidateWithinProject(candidate, projectRoot)) {
+	if (!isCandidateWithinProjectCached(candidate, projectRoot, projectMembership)) {
 		diagnostics.push({
 			severity: "warning",
 			source: candidate.path,
@@ -203,22 +287,48 @@ function loadCandidate(
 		return null;
 	}
 
+	const cachedContent = loadedRuleContent?.get(candidate.realPath);
+	if (cachedContent !== undefined) {
+		return loadedRuleFromContent(candidate, cachedContent, diagnostics);
+	}
+
 	const content = deps.readFile(candidate.path);
 	if (content === null) {
+		loadedRuleContent?.set(candidate.realPath, null);
 		diagnostics.push({ severity: "warning", source: candidate.path, message: "Unable to read rule file" });
 		return null;
 	}
 
 	const parsed = parseRule(content);
-	if (parsed.diagnostic !== undefined) {
-		diagnostics.push({ severity: "warning", source: candidate.path, message: parsed.diagnostic });
+	const loadedContent = {
+		frontmatter: parsed.frontmatter,
+		body: parsed.body,
+		contentHash: hashContent(parsed.body),
+		diagnostic: parsed.diagnostic,
+	} satisfies LoadedRuleContent;
+	loadedRuleContent?.set(candidate.realPath, loadedContent);
+	return loadedRuleFromContent(candidate, loadedContent, diagnostics);
+}
+
+function loadedRuleFromContent(
+	candidate: RuleCandidate,
+	content: LoadedRuleContent | null,
+	diagnostics: RuleDiagnostic[],
+): (LoadedRule & { matchReason: MatchReason }) | null {
+	if (content === null) {
+		diagnostics.push({ severity: "warning", source: candidate.path, message: "Unable to read rule file" });
+		return null;
+	}
+
+	if (content.diagnostic !== undefined) {
+		diagnostics.push({ severity: "warning", source: candidate.path, message: content.diagnostic });
 	}
 
 	return {
 		...candidate,
-		frontmatter: parsed.frontmatter,
-		body: parsed.body,
-		contentHash: hashContent(parsed.body),
+		frontmatter: content.frontmatter,
+		body: content.body,
+		contentHash: content.contentHash,
 		matchReason: { kind: "no-match" },
 	};
 }
@@ -238,6 +348,26 @@ function isCandidateWithinProject(candidate: RuleCandidate, projectRoot: string 
 
 	const relativeRealPath = relative(resolve(projectRoot), resolve(candidate.realPath));
 	return relativeRealPath === "" || (!relativeRealPath.startsWith("..") && !isAbsolute(relativeRealPath));
+}
+
+function isCandidateWithinProjectCached(
+	candidate: RuleCandidate,
+	projectRoot: string | null,
+	projectMembership: CandidateProjectMembership | undefined,
+): boolean {
+	if (projectMembership === undefined) {
+		return isCandidateWithinProject(candidate, projectRoot);
+	}
+
+	const cacheKey = `${projectRoot ?? ""}\0${candidate.realPath}`;
+	const cached = projectMembership.get(cacheKey);
+	if (cached !== undefined) {
+		return cached;
+	}
+
+	const isWithinProject = isCandidateWithinProject(candidate, projectRoot);
+	projectMembership.set(cacheKey, isWithinProject);
+	return isWithinProject;
 }
 
 function staticMatchReason(rule: LoadedRule): MatchReason | null {
@@ -312,6 +442,10 @@ function scopeDirectoryForCandidate(projectRoot: string, candidate: RuleCandidat
 
 function toPosixPath(path: string): string {
 	return path.replaceAll("\\", "/");
+}
+
+function uniqueStrings(values: ReadonlyArray<string>): string[] {
+	return [...new Set(values)];
 }
 
 function storeLastLoad(

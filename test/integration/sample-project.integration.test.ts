@@ -104,7 +104,7 @@ describe("sample-project full session integration", () => {
 		const appToolText = textContent(appTool);
 		expect(appTool.content).toHaveLength(2);
 		expect(appTool.content[0]?.text).toBe(readFileSync(appPath, "utf-8"));
-		expect(appToolText).toContain(`Additional project instructions matched for ${appPath}`);
+		expect(appToolText).toContain("Additional project instructions matched for apps/web/src/App.tsx");
 		expect(appToolText).toContain("Prefer `unknown` over `any`. Use exhaustive switch checks.");
 		expect(appToolText).toContain("React components must be functional and prop-typed.");
 
@@ -112,7 +112,7 @@ describe("sample-project full session integration", () => {
 		const apiToolText = textContent(apiTool);
 		expect(apiTool.content).toHaveLength(2);
 		expect(apiTool.content[0]?.text).toBe(readFileSync(apiPath, "utf-8"));
-		expect(apiToolText).toContain(`Additional project instructions matched for ${apiPath}`);
+		expect(apiToolText).toContain("Additional project instructions matched for packages/api/src/index.ts");
 		expect(apiToolText).toContain("Prefer `unknown` over `any`. Use exhaustive switch checks.");
 		expect(apiToolText).not.toContain("React components must be functional and prop-typed.");
 

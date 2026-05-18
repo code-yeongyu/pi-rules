@@ -7,10 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Matcher cache reset and stats helpers for deterministic cache verification.
+
+### Changed
+
+- Glob matching now reuses a bounded compiled matcher cache instead of recompiling picomatch patterns for every file.
+- Dynamic rule loading now deduplicates repeated target paths and rule-file parsing work.
+
 ### Fixed
 
 - Dynamic rule injection now dedupes by rule across the session instead of per tool call, preventing repeated nested `AGENTS.md`/`CLAUDE.md` instruction blocks on subsequent reads.
 - Dynamic injection now skips rules already injected statically or already loaded by pi's native context loader.
+- Dynamic rule loading now preserves each target file's project root so nested projects load their nearest rules correctly.
 
 ## [0.1.0] - 2026-04-29
 

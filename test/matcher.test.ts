@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { hashContent, matchRule, normalizeGlobs } from "../src/rules/matcher.js";
+import {
+	getMatcherCacheStats,
+	hashContent,
+	matchRule,
+	normalizeGlobs,
+	resetMatcherCache,
+} from "../src/rules/matcher.js";
 import type { RuleFrontmatter } from "../src/rules/types.js";
 
 const defaultPathBases = {
@@ -9,6 +15,43 @@ const defaultPathBases = {
 };
 
 describe("matchRule", () => {
+	it("#given same glob set is matched repeatedly #when matching multiple path bases #then compiles each pattern once", () => {
+		// given
+		resetMatcherCache();
+		const frontmatter: RuleFrontmatter = { globs: ["**/*.ts", "!**/*.test.ts"] };
+		const pathBases = {
+			projectRelative: "src/rules/foo.ts",
+			scopeRelative: "rules/foo.ts",
+			basename: "foo.ts",
+		};
+
+		// when
+		for (let index = 0; index < 20; index += 1) {
+			const result = matchRule({ frontmatter, isSingleFile: false, pathBases });
+			expect(result.matched).toBe(true);
+		}
+
+		// then
+		expect(getMatcherCacheStats()).toEqual({ entries: 1, compiledPatterns: 2 });
+	});
+
+	it("#given many unique glob sets #when matching repeatedly #then matcher cache stays bounded", () => {
+		// given
+		resetMatcherCache();
+
+		// when
+		for (let index = 0; index < 300; index += 1) {
+			matchRule({
+				frontmatter: { globs: `src/file-${index}.ts` },
+				isSingleFile: false,
+				pathBases: { projectRelative: `src/file-${index}.ts`, basename: `file-${index}.ts` },
+			});
+		}
+
+		// then
+		expect(getMatcherCacheStats().entries).toBeLessThanOrEqual(256);
+	});
+
 	it("#given single-file rule #when matching any path bases #then always matches with single-file reason", () => {
 		// given
 		const frontmatter: RuleFrontmatter = { globs: "never-matches" };

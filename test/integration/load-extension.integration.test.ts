@@ -5,7 +5,7 @@ import piRulesExtension from "../../src/index.js";
 import { type CapturedCommand, createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
 
 const EXPECTED_FLAGS = ["pi-rules-disabled", "pi-rules-mode"];
-const EXPECTED_HANDLERS = ["session_start", "before_agent_start", "tool_result"];
+const EXPECTED_HANDLERS = ["session_start", "session_compact", "before_agent_start", "tool_result"];
 const EXPECTED_COMMANDS = ["rules", "reload-rules"];
 
 type RegistrationSurface = {
@@ -66,7 +66,7 @@ describe("load extension integration", () => {
 		expect(harness.flags.get("pi-rules-mode")?.options).toMatchObject({ type: "string", default: "both" });
 	});
 
-	it("#given factory called #when inspecting harness.handlers #then 3 hooks registered: session_start, before_agent_start, tool_result", () => {
+	it("#given factory called #when inspecting harness.handlers #then 4 hooks registered: session_start, session_compact, before_agent_start, tool_result", () => {
 		// given
 		const harness = registerExtension();
 

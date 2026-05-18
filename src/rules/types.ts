@@ -120,7 +120,7 @@ export interface PiRulesConfig {
  * Per-session in-memory dedup state.
  *
  * `staticDedup` keys are `{cwd}::{rulePath}::{contentHash}` strings.
- * `dynamicDedup` stores session-scoped `{rulePath}::{contentHash}` strings.
+ * `dynamicDedup` stores `{targetPath}::{rulePath}::{contentHash}` strings grouped by target file.
  */
 export interface SessionState {
 	cwd: string | undefined;
