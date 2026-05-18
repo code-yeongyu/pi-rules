@@ -2,13 +2,15 @@
 
 ## Current status
 
-- Scope: `pi-rules` package only.
-- Expanded scope: `../codex-plugins/plugins/codex-rules` also receives equivalent verified runtime improvements.
-- Current dirty files:
-  - `src/rules/engine.ts`
-  - `src/rules/finder.ts`
-  - `test/engine.test.ts`
-  - `notepad.md`
+- Scope completed:
+  - `pi-rules`
+  - `../codex-plugins/plugins/codex-rules`
+- Final git status:
+  - `pi-rules`: `main...origin/main`, clean after commit `1072bd2`.
+  - `codex-rules`: `main...origin/main`, clean after commits `e1cf80c` and `63cb080`.
+- Local install status:
+  - `@code-yeongyu/pi-rules@0.1.0` is installed globally as a local workspace symlink.
+  - `@code-yeongyu/codex-rules@0.1.0` is installed globally as a local workspace symlink.
 - Baseline before edits:
   - `npm test`: 235 tests passed.
   - `npm run check`: passed.
@@ -112,10 +114,14 @@ Current `pi-rules` vs current `codex-rules`:
 - Duplicate targets: `pi-rules` is `25.80%` faster.
 - Distinct same-directory targets: `pi-rules` is `30.56%` faster.
 
-## Remaining gates
+## Commit and install results
 
-- Commit and push both packages after all gates pass.
-- Local global install/update for both packages.
+- `pi-rules`: `1072bd2 perf(rules): cache dynamic rule discovery`, pushed to `origin/main`.
+- `codex-rules`: `e1cf80c perf(rules): cache sorted dynamic candidates`, pushed to `origin/main`.
+- `codex-rules`: `63cb080 fix(cli): mark bundled bin executable`, pushed to `origin/main`.
+- Local install verification:
+  - `npm ls -g --depth=0 @code-yeongyu/pi-rules @code-yeongyu/codex-rules` shows both packages linked from local workspaces.
+  - `codex-rules --help` prints usage, proving the global bin is executable.
 
 ## GPT-5.2 xhigh audit
 
