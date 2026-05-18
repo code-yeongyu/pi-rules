@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_MAX_RESULT_CHARS, DEFAULT_MAX_RULE_CHARS } from "../src/rules/constants.js";
 import { createEngine, defaultConfig, type EngineDeps } from "../src/rules/engine.js";
+import { matchRule as defaultMatchRule } from "../src/rules/matcher.js";
 import type { LoadedRule, PiRulesConfig, RuleCandidate, RuleSource } from "../src/rules/types.js";
 
 const PROJECT_ROOT = "/workspace/project";
@@ -516,6 +517,100 @@ describe("loadDynamicRules", () => {
 			findCandidates: 1,
 			readFile: 1,
 		});
+	});
+
+	it("#given same target and unchanged rule body #when loadDynamicRules is called twice #then match decision is reused", () => {
+		// given
+		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			relativePath: ".sisyphus/rules/typescript.md",
+		});
+		let matchRuleCalls = 0;
+		const deps = {
+			findProjectRoot: () => PROJECT_ROOT,
+			findCandidates: () => [candidate],
+			readFile: () => ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule."),
+			extractToolPaths: () => [],
+			matchRule: (input) => {
+				matchRuleCalls += 1;
+				return defaultMatchRule(input);
+			},
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const firstResult = engine.loadDynamicRules(PROJECT_ROOT, [targetPath]);
+		const secondResult = engine.loadDynamicRules(PROJECT_ROOT, [targetPath]);
+
+		// then
+		expect(firstResult.rules).toHaveLength(1);
+		expect(secondResult.rules).toHaveLength(1);
+		expect(matchRuleCalls).toBe(1);
+	});
+
+	it("#given same target and changed rule body #when loadDynamicRules is called again #then match decision is re-evaluated", () => {
+		// given
+		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			relativePath: ".sisyphus/rules/typescript.md",
+		});
+		let body = "TypeScript rule.";
+		let matchRuleCalls = 0;
+		const deps = {
+			findProjectRoot: () => PROJECT_ROOT,
+			findCandidates: () => [candidate],
+			readFile: () => ruleMarkdown('globs: "src/**/*.ts"', body),
+			extractToolPaths: () => [],
+			matchRule: (input) => {
+				matchRuleCalls += 1;
+				return defaultMatchRule(input);
+			},
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		engine.loadDynamicRules(PROJECT_ROOT, [targetPath]);
+		body = "Updated TypeScript rule.";
+		engine.loadDynamicRules(PROJECT_ROOT, [targetPath]);
+
+		// then
+		expect(matchRuleCalls).toBe(2);
+	});
+
+	it("#given unchanged rule and different target files #when loadDynamicRules is called #then cache separates target paths", () => {
+		// given
+		const firstTarget = `${PROJECT_ROOT}/src/app.ts`;
+		const secondTarget = `${PROJECT_ROOT}/src/app.test.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
+			relativePath: ".sisyphus/rules/typescript.md",
+		});
+		let matchRuleCalls = 0;
+		const deps = {
+			findProjectRoot: () => PROJECT_ROOT,
+			findCandidates: () => [candidate],
+			readFile: () => ruleMarkdown('globs: ["src/**/*.ts", "!src/**/*.test.ts"]', "TypeScript rule."),
+			extractToolPaths: () => [],
+			matchRule: (input) => {
+				matchRuleCalls += 1;
+				return defaultMatchRule(input);
+			},
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const firstResult = engine.loadDynamicRules(PROJECT_ROOT, [firstTarget]);
+		const secondResult = engine.loadDynamicRules(PROJECT_ROOT, [secondTarget]);
+
+		// then
+		expect(firstResult.rules).toHaveLength(1);
+		expect(secondResult.rules).toEqual([]);
+		expect(matchRuleCalls).toBe(2);
 	});
 });
 

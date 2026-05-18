@@ -30,6 +30,9 @@ interface LoadedRuleContent {
 }
 
 type CandidateProjectMembership = Map<string, boolean>;
+type DynamicMatchCache = Map<string, MatchReason | null>;
+
+const MAX_DYNAMIC_MATCH_CACHE_ENTRIES = 4096;
 
 export interface EngineDeps {
 	findCandidates: (options: {
@@ -42,6 +45,7 @@ export interface EngineDeps {
 	readFile: (path: string) => string | null;
 	findProjectRoot: (startPath: string) => string | null;
 	extractToolPaths: (event: ToolResultEvent, cwd: string) => string[];
+	matchRule?: typeof matchRule;
 }
 
 export interface Engine {
@@ -75,6 +79,7 @@ export function defaultConfig(): PiRulesConfig {
 
 export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 	const state = createSessionState();
+	const dynamicMatchCache: DynamicMatchCache = new Map();
 
 	function loadStaticRules(cwd: string): { rules: LoadedRule[]; diagnostics: RuleDiagnostic[] } {
 		state.cwd = cwd;
@@ -126,13 +131,16 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 					continue;
 				}
 
-				const matchResult = matchRule({
-					frontmatter: loadedRule.frontmatter,
-					isSingleFile: candidate.isSingleFile,
-					pathBases: pathBasesForTarget(projectRoot, targetFile, candidate),
-				});
+				const matchReason = matchDynamicRuleCached(
+					dynamicMatchCache,
+					projectRoot,
+					targetFile,
+					candidate,
+					loadedRule,
+					deps.matchRule ?? matchRule,
+				);
 
-				if (!matchResult.matched) {
+				if (matchReason === null) {
 					continue;
 				}
 
@@ -142,7 +150,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 				}
 
 				seenRules.add(dedupKey);
-				rules.push({ ...loadedRule, matchReason: matchResult.reason });
+				rules.push({ ...loadedRule, matchReason });
 			}
 		}
 
@@ -165,6 +173,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 			}),
 		resetSession: (cwd) => {
 			clearSession(state);
+			dynamicMatchCache.clear();
 			if (cwd !== undefined) {
 				state.cwd = cwd;
 			}
@@ -174,6 +183,61 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		markStaticInjected: (rule) => markStaticInjectedInState(state, rule),
 		markDynamicInjected: (scopeKey, rule) => markDynamicInjectedInState(state, scopeKey, rule),
 	};
+}
+
+function matchDynamicRuleCached(
+	cache: DynamicMatchCache,
+	projectRoot: string | null,
+	targetFile: string,
+	candidate: RuleCandidate,
+	loadedRule: LoadedRule,
+	matchRuleImpl: typeof matchRule,
+): MatchReason | null {
+	const cacheKey = dynamicMatchCacheKey(projectRoot, targetFile, candidate, loadedRule.contentHash);
+	if (cache.has(cacheKey)) {
+		const cachedReason = cache.get(cacheKey) ?? null;
+		cache.delete(cacheKey);
+		cache.set(cacheKey, cachedReason);
+		return cachedReason;
+	}
+
+	const matchResult = matchRuleImpl({
+		frontmatter: loadedRule.frontmatter,
+		isSingleFile: candidate.isSingleFile,
+		pathBases: pathBasesForTarget(projectRoot, targetFile, candidate),
+	});
+	const reason = matchResult.matched ? matchResult.reason : null;
+	setDynamicMatchCacheEntry(cache, cacheKey, reason);
+	return reason;
+}
+
+function setDynamicMatchCacheEntry(cache: DynamicMatchCache, cacheKey: string, reason: MatchReason | null): void {
+	if (cache.size >= MAX_DYNAMIC_MATCH_CACHE_ENTRIES) {
+		const oldestCacheKey = cache.keys().next().value;
+		if (oldestCacheKey !== undefined) {
+			cache.delete(oldestCacheKey);
+		}
+	}
+	cache.set(cacheKey, reason);
+}
+
+function dynamicMatchCacheKey(
+	projectRoot: string | null,
+	targetFile: string,
+	candidate: RuleCandidate,
+	contentHash: string,
+): string {
+	return [
+		projectRoot ?? "",
+		toPosixPath(resolve(targetFile)),
+		candidate.realPath,
+		candidate.relativePath,
+		candidate.source,
+		candidate.isGlobal ? "global" : "project",
+		candidate.isSingleFile ? "single" : "multi",
+		String(candidate.distance),
+		contentHash,
+	].join("\0");
 }
 
 function loadStaticCandidates(candidates: ReadonlyArray<RuleCandidate>, deps: EngineDeps, projectRoot: string | null) {
