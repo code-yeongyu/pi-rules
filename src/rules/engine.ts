@@ -108,13 +108,9 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const loadedRuleContent = new Map<string, LoadedRuleContent | null>();
 		const projectMembership = new Map<string, boolean>();
 		const disabledSources = disabledSourcesFor(config);
-		const cwdProjectRoot = deps.findProjectRoot(cwd);
 
 		for (const targetFile of uniqueStrings(targetPaths)) {
-			const projectRoot =
-				cwdProjectRoot !== null && isSameOrChildPath(targetFile, cwdProjectRoot)
-					? cwdProjectRoot
-					: deps.findProjectRoot(targetFile);
+			const projectRoot = deps.findProjectRoot(targetFile);
 			const candidates = deps.findCandidates({ projectRoot, targetFile, disabledSources });
 
 			for (const candidate of sortCandidates(candidates)) {
@@ -308,11 +304,6 @@ function isCandidateWithinProjectCached(
 	const isWithinProject = isCandidateWithinProject(candidate, projectRoot);
 	projectMembership.set(cacheKey, isWithinProject);
 	return isWithinProject;
-}
-
-function isSameOrChildPath(childPath: string, parentPath: string): boolean {
-	const childRelativePath = relative(parentPath, resolve(childPath));
-	return childRelativePath === "" || (!childRelativePath.startsWith("..") && !isAbsolute(childRelativePath));
 }
 
 function staticMatchReason(rule: LoadedRule): MatchReason | null {

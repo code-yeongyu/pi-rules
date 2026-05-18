@@ -446,6 +446,36 @@ describe("loadDynamicRules", () => {
 		expect(result.rules[0]?.path).toBe(candidate.path);
 	});
 
+	it("#given target file in nested project #when loadDynamicRules #then nearest target project root is used", () => {
+		// given
+		const nestedProjectRoot = `${PROJECT_ROOT}/packages/app`;
+		const targetPath = `${nestedProjectRoot}/src/index.ts`;
+		const candidate = makeCandidate({
+			path: `${nestedProjectRoot}/.sisyphus/rules/typescript.md`,
+			realPath: `${nestedProjectRoot}/.sisyphus/rules/typescript.md`,
+			relativePath: ".sisyphus/rules/typescript.md",
+		});
+		const projectRootCalls: string[] = [];
+		const deps = {
+			findProjectRoot: (startPath) => {
+				projectRootCalls.push(startPath);
+				return startPath === targetPath ? nestedProjectRoot : PROJECT_ROOT;
+			},
+			findCandidates: ({ projectRoot }) => (projectRoot === nestedProjectRoot ? [candidate] : []),
+			readFile: () => ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule."),
+			extractToolPaths: () => [],
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const result = engine.loadDynamicRules(PROJECT_ROOT, [targetPath]);
+
+		// then
+		expect(projectRootCalls).toEqual([targetPath]);
+		expect(result.rules).toHaveLength(1);
+		expect(result.rules[0]?.path).toBe(candidate.path);
+	});
+
 	it("#given duplicate target paths #when loadDynamicRules #then repeated discovery and parsing work is avoided", () => {
 		// given
 		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
