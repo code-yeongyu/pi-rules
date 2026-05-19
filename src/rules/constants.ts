@@ -19,7 +19,7 @@ export const PROJECT_MARKERS: readonly string[] = [
  * the project root, second is the subdir scanned recursively.
  */
 export const PROJECT_RULE_SUBDIRS: ReadonlyArray<readonly [string, string]> = [
-	[".sisyphus", "rules"],
+	[".omo", "rules"],
 	[".claude", "rules"],
 	[".cursor", "rules"],
 	[".github", "instructions"],
@@ -38,7 +38,7 @@ export const PROJECT_SINGLE_FILES: readonly string[] = [
 /**
  * User-home rule directories.
  */
-export const USER_HOME_RULE_SUBDIRS: readonly string[] = [".sisyphus/rules", ".opencode/rules", ".claude/rules"];
+export const USER_HOME_RULE_SUBDIRS: readonly string[] = [".omo/rules", ".opencode/rules", ".claude/rules"];
 
 /**
  * User-home single-file rules. The first one to exist wins per "first-match" semantics.
@@ -54,7 +54,7 @@ export const RULE_FILE_EXTENSIONS: readonly string[] = [".md", ".mdc"];
  * Per-rule source priority for deterministic ordering. Lower = earlier.
  */
 export const SOURCE_PRIORITY: ReadonlyMap<RuleSource, number> = new Map([
-	[".sisyphus/rules", 0],
+	[".omo/rules", 0],
 	[".claude/rules", 1],
 	[".cursor/rules", 2],
 	[".github/instructions", 3],
@@ -62,7 +62,7 @@ export const SOURCE_PRIORITY: ReadonlyMap<RuleSource, number> = new Map([
 	["AGENTS.md", 5],
 	["CLAUDE.md", 6],
 	["CONTEXT.md", 7],
-	["~/.sisyphus/rules", 100],
+	["~/.omo/rules", 100],
 	["~/.opencode/rules", 101],
 	["~/.claude/rules", 102],
 	["~/.config/opencode/AGENTS.md", 103],

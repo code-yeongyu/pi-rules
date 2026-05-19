@@ -39,11 +39,11 @@ describe("findRuleCandidates", () => {
 		return candidate;
 	};
 
-	it('#given project with .sisyphus/rules/core.md #when finding from project root #then candidate has source ".sisyphus/rules" and distance 0', () => {
+	it('#given project with .omo/rules/core.md #when finding from project root #then candidate has source ".omo/rules" and distance 0', () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
-		const rulePath = tempFileSystem.write("repo/.sisyphus/rules/core.md", "Core rule.");
+		const rulePath = tempFileSystem.write("repo/.omo/rules/core.md", "Core rule.");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile: null, homeDir: tempFileSystem.path("home") });
@@ -52,34 +52,34 @@ describe("findRuleCandidates", () => {
 		expect(result).toContainEqual({
 			path: rulePath,
 			realPath: realpathSync.native(rulePath),
-			source: ".sisyphus/rules",
+			source: ".omo/rules",
 			distance: 0,
 			isGlobal: false,
 			isSingleFile: false,
-			relativePath: ".sisyphus/rules/core.md",
+			relativePath: ".omo/rules/core.md",
 		});
 	});
 
-	it("#given project with .sisyphus/rules in nested package #when finding from nested file #then both project-root and nested rules included with correct distances", () => {
+	it("#given project with .omo/rules in nested package #when finding from nested file #then both project-root and nested rules included with correct distances", () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
-		const rootRulePath = tempFileSystem.write("repo/.sisyphus/rules/root.md", "Root rule.");
-		const nestedRulePath = tempFileSystem.write("repo/packages/app/.sisyphus/rules/nested.md", "Nested rule.");
+		const rootRulePath = tempFileSystem.write("repo/.omo/rules/root.md", "Root rule.");
+		const nestedRulePath = tempFileSystem.write("repo/packages/app/.omo/rules/nested.md", "Nested rule.");
 		const targetFile = tempFileSystem.write("repo/packages/app/src/index.ts", "export {};\n");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile, homeDir: tempFileSystem.path("home") });
 
 		// then
-		expect(findByRelativePath(result, ".sisyphus/rules/root.md")).toMatchObject({
+		expect(findByRelativePath(result, ".omo/rules/root.md")).toMatchObject({
 			path: rootRulePath,
-			source: ".sisyphus/rules",
+			source: ".omo/rules",
 			distance: 3,
 		});
-		expect(findByRelativePath(result, "packages/app/.sisyphus/rules/nested.md")).toMatchObject({
+		expect(findByRelativePath(result, "packages/app/.omo/rules/nested.md")).toMatchObject({
 			path: nestedRulePath,
-			source: ".sisyphus/rules",
+			source: ".omo/rules",
 			distance: 1,
 		});
 	});
@@ -173,11 +173,11 @@ describe("findRuleCandidates", () => {
 		});
 	});
 
-	it("#given user home with ~/.sisyphus/rules/global.md #when finding with homeDir override #then candidate has isGlobal true and distance GLOBAL_DISTANCE", () => {
+	it("#given user home with ~/.omo/rules/global.md #when finding with homeDir override #then candidate has isGlobal true and distance GLOBAL_DISTANCE", () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		const homeDir = tempFileSystem.mkdir("home");
-		const rulePath = tempFileSystem.write("home/.sisyphus/rules/global.md", "Global rule.");
+		const rulePath = tempFileSystem.write("home/.omo/rules/global.md", "Global rule.");
 
 		// when
 		const result = findRuleCandidates({ projectRoot: null, targetFile: null, homeDir });
@@ -186,11 +186,11 @@ describe("findRuleCandidates", () => {
 		expect(result).toContainEqual({
 			path: rulePath,
 			realPath: realpathSync.native(rulePath),
-			source: "~/.sisyphus/rules",
+			source: "~/.omo/rules",
 			distance: GLOBAL_DISTANCE,
 			isGlobal: true,
 			isSingleFile: false,
-			relativePath: ".sisyphus/rules/global.md",
+			relativePath: ".omo/rules/global.md",
 		});
 	});
 
@@ -220,7 +220,7 @@ describe("findRuleCandidates", () => {
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
 		tempFileSystem.write("repo/.cursor/rules/ui.mdc", "Cursor rule.");
-		tempFileSystem.write("repo/.sisyphus/rules/core.md", "Core rule.");
+		tempFileSystem.write("repo/.omo/rules/core.md", "Core rule.");
 
 		// when
 		const result = findRuleCandidates({
@@ -232,7 +232,7 @@ describe("findRuleCandidates", () => {
 
 		// then
 		expect(result.some((candidate) => candidate.source === ".cursor/rules")).toBe(false);
-		expect(result.some((candidate) => candidate.source === ".sisyphus/rules")).toBe(true);
+		expect(result.some((candidate) => candidate.source === ".omo/rules")).toBe(true);
 	});
 
 	it("#given skipUserHome=true #when finding #then no user-home candidates regardless of files", () => {
@@ -240,7 +240,7 @@ describe("findRuleCandidates", () => {
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
 		const homeDir = tempFileSystem.mkdir("home");
-		tempFileSystem.write("home/.sisyphus/rules/global.md", "Global rule.");
+		tempFileSystem.write("home/.omo/rules/global.md", "Global rule.");
 		tempFileSystem.write("home/.config/opencode/AGENTS.md", "OpenCode agent rule.");
 
 		// when
@@ -284,34 +284,34 @@ describe("findRuleCandidates", () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
-		tempFileSystem.write("repo/.sisyphus/rules/root.md", "Root rule.");
-		tempFileSystem.write("repo/packages/.sisyphus/rules/packages.md", "Packages rule.");
-		tempFileSystem.write("repo/packages/app/.sisyphus/rules/app.md", "App rule.");
+		tempFileSystem.write("repo/.omo/rules/root.md", "Root rule.");
+		tempFileSystem.write("repo/packages/.omo/rules/packages.md", "Packages rule.");
+		tempFileSystem.write("repo/packages/app/.omo/rules/app.md", "App rule.");
 		const targetFile = tempFileSystem.write("repo/packages/app/src/file.ts", "export {};\n");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile, homeDir: tempFileSystem.path("home") });
 
 		// then
-		expect(findByRelativePath(result, "packages/app/.sisyphus/rules/app.md")).toMatchObject({ distance: 1 });
-		expect(findByRelativePath(result, "packages/.sisyphus/rules/packages.md")).toMatchObject({ distance: 2 });
-		expect(findByRelativePath(result, ".sisyphus/rules/root.md")).toMatchObject({ distance: 3 });
+		expect(findByRelativePath(result, "packages/app/.omo/rules/app.md")).toMatchObject({ distance: 1 });
+		expect(findByRelativePath(result, "packages/.omo/rules/packages.md")).toMatchObject({ distance: 2 });
+		expect(findByRelativePath(result, ".omo/rules/root.md")).toMatchObject({ distance: 3 });
 	});
 
-	it("#given target file in subdir with own .sisyphus/rules #when finding #then closest .sisyphus rules have distance 0, parent .sisyphus rules have distance > 0", () => {
+	it("#given target file in subdir with own .omo/rules #when finding #then closest .omo rules have distance 0, parent .omo rules have distance > 0", () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
-		tempFileSystem.write("repo/.sisyphus/rules/root.md", "Root rule.");
-		tempFileSystem.write("repo/src/.sisyphus/rules/src.md", "Src rule.");
+		tempFileSystem.write("repo/.omo/rules/root.md", "Root rule.");
+		tempFileSystem.write("repo/src/.omo/rules/src.md", "Src rule.");
 		const targetFile = tempFileSystem.write("repo/src/file.ts", "export {};\n");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile, homeDir: tempFileSystem.path("home") });
 
 		// then
-		expect(findByRelativePath(result, "src/.sisyphus/rules/src.md")).toMatchObject({ distance: 0 });
-		expect(findByRelativePath(result, ".sisyphus/rules/root.md")).toMatchObject({ distance: 1 });
+		expect(findByRelativePath(result, "src/.omo/rules/src.md")).toMatchObject({ distance: 0 });
+		expect(findByRelativePath(result, ".omo/rules/root.md")).toMatchObject({ distance: 1 });
 	});
 
 	it("#given symlink to a rule file #when finding #then realPath populated correctly", () => {
@@ -319,13 +319,13 @@ describe("findRuleCandidates", () => {
 		const tempFileSystem = createTrackedTempFs();
 		const projectRoot = tempFileSystem.mkdir("repo");
 		const targetRulePath = tempFileSystem.write("repo/shared/target.md", "Shared rule.");
-		const linkPath = tempFileSystem.symlink("repo/shared/target.md", "repo/.sisyphus/rules/linked.md");
+		const linkPath = tempFileSystem.symlink("repo/shared/target.md", "repo/.omo/rules/linked.md");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile: null, homeDir: tempFileSystem.path("home") });
 
 		// then
-		expect(findByRelativePath(result, ".sisyphus/rules/linked.md")).toMatchObject({
+		expect(findByRelativePath(result, ".omo/rules/linked.md")).toMatchObject({
 			path: linkPath,
 			realPath: realpathSync.native(targetRulePath),
 		});
@@ -335,19 +335,19 @@ describe("findRuleCandidates", () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
 		tempFileSystem.mkdir("outer/.git");
-		tempFileSystem.write("outer/.sisyphus/rules/outside.md", "Outside rule.");
+		tempFileSystem.write("outer/.omo/rules/outside.md", "Outside rule.");
 		const projectRoot = tempFileSystem.mkdir("outer/packages/app");
 		tempFileSystem.mkdir("outer/packages/app/.git");
-		tempFileSystem.write("outer/packages/app/.sisyphus/rules/inside.md", "Inside rule.");
+		tempFileSystem.write("outer/packages/app/.omo/rules/inside.md", "Inside rule.");
 		const targetFile = tempFileSystem.write("outer/packages/app/src/index.ts", "export {};\n");
 
 		// when
 		const result = findRuleCandidates({ projectRoot, targetFile, homeDir: tempFileSystem.path("home") });
 
 		// then
-		expect(result.map((candidate) => candidate.path)).toContain(join(projectRoot, ".sisyphus/rules/inside.md"));
+		expect(result.map((candidate) => candidate.path)).toContain(join(projectRoot, ".omo/rules/inside.md"));
 		expect(result.map((candidate) => candidate.path)).not.toContain(
-			tempFileSystem.path("outer/.sisyphus/rules/outside.md"),
+			tempFileSystem.path("outer/.omo/rules/outside.md"),
 		);
 	});
 });

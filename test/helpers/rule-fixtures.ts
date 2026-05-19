@@ -37,9 +37,9 @@ export function largeRuleBody(charCount: number): string {
 }
 
 export function makeRuleCandidate(overrides: Partial<RuleCandidate> = {}): RuleCandidate {
-	const path = overrides.path ?? "/tmp/sample/.sisyphus/rules/sample.md";
+	const path = overrides.path ?? "/tmp/sample/.omo/rules/sample.md";
 	const realPath = overrides.realPath ?? path;
-	const source: RuleSource = overrides.source ?? ".sisyphus/rules";
+	const source: RuleSource = overrides.source ?? ".omo/rules";
 	return {
 		path,
 		realPath,
@@ -47,7 +47,7 @@ export function makeRuleCandidate(overrides: Partial<RuleCandidate> = {}): RuleC
 		distance: overrides.distance ?? 0,
 		isGlobal: overrides.isGlobal ?? false,
 		isSingleFile: overrides.isSingleFile ?? false,
-		relativePath: overrides.relativePath ?? ".sisyphus/rules/sample.md",
+		relativePath: overrides.relativePath ?? ".omo/rules/sample.md",
 	};
 }
 

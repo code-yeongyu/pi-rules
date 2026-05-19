@@ -152,7 +152,7 @@ describe("piRulesExtension", () => {
 		// given
 		const project = createProject();
 		const targetPath = project.write("src/index.ts", "export const value = 1;");
-		project.write(".sisyphus/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
+		project.write(".omo/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
 		const fakePi = registerExtension();
 		fakePi.flagValues.set("pi-rules-disabled", true);
 		const cwd = projectCwd(project);
@@ -276,7 +276,7 @@ describe("piRulesExtension", () => {
 		// given
 		const project = createProject();
 		const targetPath = project.write("src/index.ts", "export const value = 1;");
-		project.write(".sisyphus/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
+		project.write(".omo/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
 		const fakePi = registerExtension();
 		fakePi.flagValues.set("pi-rules-mode", "static");
 		const cwd = projectCwd(project);
@@ -296,7 +296,7 @@ describe("piRulesExtension", () => {
 		// given
 		const project = createProject();
 		const targetPath = project.write("src/index.ts", "export const value = 1;");
-		project.write(".sisyphus/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
+		project.write(".omo/rules/typescript.md", '---\nglobs: "src/**/*.ts"\n---\nUse TypeScript rules.');
 		const fakePi = registerExtension();
 		const cwd = projectCwd(project);
 

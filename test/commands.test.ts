@@ -67,7 +67,7 @@ describe("registerSlashCommands", () => {
 
 	it('#given /rules with "list" subcommand #when invoked #then notify text contains rule paths', async () => {
 		// given
-		const rule = makeLoadedRule({ path: "/tmp/test/foo.md", relativePath: "foo.md", source: ".sisyphus/rules" });
+		const rule = makeLoadedRule({ path: "/tmp/test/foo.md", relativePath: "foo.md", source: ".omo/rules" });
 		const fakePi = registerCommands(createStubEngine({ rules: [rule] }));
 		const command = fakePi.commands.find((candidate) => candidate.name === "rules");
 
@@ -76,7 +76,7 @@ describe("registerSlashCommands", () => {
 
 		// then
 		expect(fakePi.notifications[0]?.message).toContain("foo.md");
-		expect(fakePi.notifications[0]?.message).toContain(".sisyphus/rules");
+		expect(fakePi.notifications[0]?.message).toContain(".omo/rules");
 	});
 
 	it('#given /rules with "show foo.md" subcommand and matching rule #when invoked #then notify text contains rule body', async () => {

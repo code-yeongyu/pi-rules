@@ -10,8 +10,8 @@ import { createTempFs } from "./helpers/temp-fs.js";
 const PROJECT_ROOT = "/workspace/project";
 
 function makeCandidate(overrides: Partial<RuleCandidate> = {}): RuleCandidate {
-	const path = overrides.path ?? `${PROJECT_ROOT}/.sisyphus/rules/sample.md`;
-	const source: RuleSource = overrides.source ?? ".sisyphus/rules";
+	const path = overrides.path ?? `${PROJECT_ROOT}/.omo/rules/sample.md`;
+	const source: RuleSource = overrides.source ?? ".omo/rules";
 
 	return {
 		path,
@@ -20,7 +20,7 @@ function makeCandidate(overrides: Partial<RuleCandidate> = {}): RuleCandidate {
 		distance: overrides.distance ?? 0,
 		isGlobal: overrides.isGlobal ?? false,
 		isSingleFile: overrides.isSingleFile ?? false,
-		relativePath: overrides.relativePath ?? ".sisyphus/rules/sample.md",
+		relativePath: overrides.relativePath ?? ".omo/rules/sample.md",
 	};
 }
 
@@ -247,8 +247,8 @@ describe("loadStaticRules", () => {
 	it("#given malformed rule file #when loadStaticRules #then diagnostic recorded but other rules still loaded", () => {
 		// given
 		const malformed = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/bad.md`,
-			relativePath: ".sisyphus/rules/bad.md",
+			path: `${PROJECT_ROOT}/.omo/rules/bad.md`,
+			relativePath: ".omo/rules/bad.md",
 		});
 		const valid = makeCandidate({
 			path: `${PROJECT_ROOT}/AGENTS.md`,
@@ -277,7 +277,7 @@ describe("loadStaticRules", () => {
 
 	it("#given readFile returns null #when loadStaticRules #then diagnostic recorded for that path, other rules loaded", () => {
 		// given
-		const missing = makeCandidate({ path: `${PROJECT_ROOT}/.sisyphus/rules/missing.md` });
+		const missing = makeCandidate({ path: `${PROJECT_ROOT}/.omo/rules/missing.md` });
 		const valid = makeCandidate({
 			path: `${PROJECT_ROOT}/AGENTS.md`,
 			realPath: `${PROJECT_ROOT}/AGENTS.md`,
@@ -302,9 +302,9 @@ describe("loadStaticRules", () => {
 	it("#given project rule realPath escapes project root #when loadStaticRules #then skipped before readFile", () => {
 		// given
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/leak.md`,
+			path: `${PROJECT_ROOT}/.omo/rules/leak.md`,
 			realPath: "/Users/example/.ssh/id_rsa",
-			relativePath: ".sisyphus/rules/leak.md",
+			relativePath: ".omo/rules/leak.md",
 		});
 		const engine = createTestEngine(
 			{},
@@ -329,16 +329,13 @@ describe("loadStaticRules", () => {
 		const tempFs = createTempFs("pi-rules-engine-");
 		try {
 			const realProjectRoot = tempFs.mkdir("real-project");
-			tempFs.write(
-				"real-project/.sisyphus/rules/typescript.md",
-				ruleMarkdown("alwaysApply: true", "TypeScript rule."),
-			);
+			tempFs.write("real-project/.omo/rules/typescript.md", ruleMarkdown("alwaysApply: true", "TypeScript rule."));
 			const symlinkProjectRoot = tempFs.symlink(realProjectRoot, "linked-project");
-			const symlinkRulePath = tempFs.path("linked-project", ".sisyphus", "rules", "typescript.md");
+			const symlinkRulePath = tempFs.path("linked-project", ".omo", "rules", "typescript.md");
 			const candidate = makeCandidate({
 				path: symlinkRulePath,
 				realPath: realpathSync.native(symlinkRulePath),
-				relativePath: ".sisyphus/rules/typescript.md",
+				relativePath: ".omo/rules/typescript.md",
 			});
 			const engine = createEngine(defaultConfig(), {
 				findProjectRoot: () => symlinkProjectRoot,
@@ -435,16 +432,16 @@ describe("loadDynamicRules", () => {
 	it("#given multiple matching rules #when loadDynamicRules #then sorted via ordering (closest first)", () => {
 		// given
 		const rootRule = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/root.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/root.md`,
+			path: `${PROJECT_ROOT}/.omo/rules/root.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/root.md`,
 			distance: 3,
-			relativePath: ".sisyphus/rules/root.md",
+			relativePath: ".omo/rules/root.md",
 		});
 		const nestedRule = makeCandidate({
-			path: `${PROJECT_ROOT}/packages/app/.sisyphus/rules/nested.md`,
-			realPath: `${PROJECT_ROOT}/packages/app/.sisyphus/rules/nested.md`,
+			path: `${PROJECT_ROOT}/packages/app/.omo/rules/nested.md`,
+			realPath: `${PROJECT_ROOT}/packages/app/.omo/rules/nested.md`,
 			distance: 1,
-			relativePath: "packages/app/.sisyphus/rules/nested.md",
+			relativePath: "packages/app/.omo/rules/nested.md",
 		});
 		const engine = createTestEngine(
 			{},
@@ -460,8 +457,8 @@ describe("loadDynamicRules", () => {
 
 		// then
 		expect(result.rules.map((rule) => rule.relativePath)).toEqual([
-			"packages/app/.sisyphus/rules/nested.md",
-			".sisyphus/rules/root.md",
+			"packages/app/.omo/rules/nested.md",
+			".omo/rules/root.md",
 		]);
 	});
 
@@ -492,9 +489,9 @@ describe("loadDynamicRules", () => {
 		const nestedProjectRoot = `${PROJECT_ROOT}/packages/app`;
 		const targetPath = `${nestedProjectRoot}/src/index.ts`;
 		const candidate = makeCandidate({
-			path: `${nestedProjectRoot}/.sisyphus/rules/typescript.md`,
-			realPath: `${nestedProjectRoot}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${nestedProjectRoot}/.omo/rules/typescript.md`,
+			realPath: `${nestedProjectRoot}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		const projectRootCalls: string[] = [];
 		const deps = {
@@ -521,9 +518,9 @@ describe("loadDynamicRules", () => {
 		// given
 		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		const counters = {
 			findProjectRoot: 0,
@@ -565,9 +562,9 @@ describe("loadDynamicRules", () => {
 		const secondTarget = `${PROJECT_ROOT}/src/second.ts`;
 		const thirdTarget = `${PROJECT_ROOT}/src/third.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let findProjectRootCalls = 0;
 		const deps = {
@@ -594,9 +591,9 @@ describe("loadDynamicRules", () => {
 		const firstTarget = `${PROJECT_ROOT}/src/first.ts`;
 		const secondTarget = `${PROJECT_ROOT}/test/second.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		const observedCaches: Array<object | undefined> = [];
 		const deps = {
@@ -626,9 +623,9 @@ describe("loadDynamicRules", () => {
 		const secondTarget = `${PROJECT_ROOT}/src/second.ts`;
 		const thirdTarget = `${PROJECT_ROOT}/src/third.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let findCandidatesCalls = 0;
 		const deps = {
@@ -654,9 +651,9 @@ describe("loadDynamicRules", () => {
 		// given
 		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let matchRuleCalls = 0;
 		const deps = {
@@ -685,9 +682,9 @@ describe("loadDynamicRules", () => {
 		// given
 		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let body = "TypeScript rule.";
 		let matchRuleCalls = 0;
@@ -716,9 +713,9 @@ describe("loadDynamicRules", () => {
 		// given
 		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let frontmatter = 'globs: "src/**/*.ts"';
 		let matchRuleCalls = 0;
@@ -750,9 +747,9 @@ describe("loadDynamicRules", () => {
 		const firstTarget = `${PROJECT_ROOT}/src/app.ts`;
 		const secondTarget = `${PROJECT_ROOT}/src/app.test.ts`;
 		const candidate = makeCandidate({
-			path: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			realPath: `${PROJECT_ROOT}/.sisyphus/rules/typescript.md`,
-			relativePath: ".sisyphus/rules/typescript.md",
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
 		});
 		let matchRuleCalls = 0;
 		const deps = {

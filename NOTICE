@@ -2,7 +2,7 @@ pi-rules
 
 This package implements rule/context loading for the pi coding-agent extension ecosystem.
 Its behavior is inspired by oh-my-openagent (omo) at
-https://github.com/code-yeongyu/oh-my-openagent, including omo's `.sisyphus/rules/`
+https://github.com/code-yeongyu/oh-my-openagent, including omo's `.omo/rules/`
 workflow and the rules-injector hook architecture. omo is originally licensed under
 the Sustainable Use License 1.0.
 

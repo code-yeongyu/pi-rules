@@ -58,8 +58,8 @@ describe("formatStaticBlock", () => {
 		// given
 		const firstRule = makeLoadedRule({ path: "/project/AGENTS.md", relativePath: "AGENTS.md", body: "First rule." });
 		const secondRule = makeLoadedRule({
-			path: "/project/.sisyphus/rules/test.md",
-			relativePath: ".sisyphus/rules/test.md",
+			path: "/project/.omo/rules/test.md",
+			relativePath: ".omo/rules/test.md",
 			body: "Second rule.",
 		});
 
@@ -68,12 +68,12 @@ describe("formatStaticBlock", () => {
 
 		// then
 		expect(result).toContain("Instructions from: /project/AGENTS.md\nFirst rule.");
-		expect(result).toContain("\n\nInstructions from: /project/.sisyphus/rules/test.md\nSecond rule.");
+		expect(result).toContain("\n\nInstructions from: /project/.omo/rules/test.md\nSecond rule.");
 	});
 
 	it("#given rule body exceeds maxRuleChars #when formatting #then body truncated and ends with notice", () => {
 		// given
-		const relativePath = ".sisyphus/rules/large.md";
+		const relativePath = ".omo/rules/large.md";
 		const rule = makeLoadedRule({ relativePath, body: "a".repeat(100) });
 		const notice = noticeFor(relativePath);
 
@@ -164,7 +164,7 @@ describe("formatDynamicBlock", () => {
 
 	it("#given truncated rule body #when formatting dynamic #then truncation notice present", () => {
 		// given
-		const relativePath = ".sisyphus/rules/dynamic.md";
+		const relativePath = ".omo/rules/dynamic.md";
 		const rule = makeLoadedRule({ relativePath, body: "d".repeat(100) });
 		const notice = noticeFor(relativePath);
 

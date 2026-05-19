@@ -76,7 +76,7 @@ export interface LoadedRule extends RuleCandidate {
  * Source identifier for rule files. Used for deterministic ordering and display.
  */
 export type RuleSource =
-	| ".sisyphus/rules"
+	| ".omo/rules"
 	| ".claude/rules"
 	| ".cursor/rules"
 	| ".github/instructions"
@@ -84,7 +84,7 @@ export type RuleSource =
 	| "AGENTS.md"
 	| "CLAUDE.md"
 	| "CONTEXT.md"
-	| "~/.sisyphus/rules"
+	| "~/.omo/rules"
 	| "~/.opencode/rules"
 	| "~/.claude/rules"
 	| "~/.config/opencode/AGENTS.md"

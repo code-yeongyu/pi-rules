@@ -8,9 +8,9 @@ import { makeRuleCandidate } from "./helpers/rule-fixtures.js";
 describe("sortCandidates", () => {
 	it("#given local and global rules #when sorting #then local first", () => {
 		// given
-		const localRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/local.md", isGlobal: false });
+		const localRule = makeRuleCandidate({ relativePath: ".omo/rules/local.md", isGlobal: false });
 		const globalRule = makeRuleCandidate({
-			source: "~/.sisyphus/rules",
+			source: "~/.omo/rules",
 			relativePath: "",
 			distance: GLOBAL_DISTANCE,
 			isGlobal: true,
@@ -25,9 +25,9 @@ describe("sortCandidates", () => {
 
 	it("#given multiple distances #when sorting #then closest distance first", () => {
 		// given
-		const farRule = makeRuleCandidate({ distance: 3, relativePath: ".sisyphus/rules/far.md" });
-		const closeRule = makeRuleCandidate({ distance: 0, relativePath: ".sisyphus/rules/close.md" });
-		const middleRule = makeRuleCandidate({ distance: 1, relativePath: ".sisyphus/rules/middle.md" });
+		const farRule = makeRuleCandidate({ distance: 3, relativePath: ".omo/rules/far.md" });
+		const closeRule = makeRuleCandidate({ distance: 0, relativePath: ".omo/rules/close.md" });
+		const middleRule = makeRuleCandidate({ distance: 1, relativePath: ".omo/rules/middle.md" });
 
 		// when
 		const result = sortCandidates([farRule, closeRule, middleRule]);
@@ -36,12 +36,12 @@ describe("sortCandidates", () => {
 		expect(result).toEqual([closeRule, middleRule, farRule]);
 	});
 
-	it("#given same distance different sources #when sorting #then .sisyphus/rules before .claude/rules", () => {
+	it("#given same distance different sources #when sorting #then .omo/rules before .claude/rules", () => {
 		// given
 		const claudeRule = makeRuleCandidate({ source: ".claude/rules", relativePath: ".claude/rules/typescript.md" });
 		const sisyphusRule = makeRuleCandidate({
-			source: ".sisyphus/rules",
-			relativePath: ".sisyphus/rules/typescript.md",
+			source: ".omo/rules",
+			relativePath: ".omo/rules/typescript.md",
 		});
 
 		// when
@@ -53,8 +53,8 @@ describe("sortCandidates", () => {
 
 	it("#given same source same distance #when sorting #then alphabetical relativePath order", () => {
 		// given
-		const zebraRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/zebra.md" });
-		const alphaRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/alpha.md" });
+		const zebraRule = makeRuleCandidate({ relativePath: ".omo/rules/zebra.md" });
+		const alphaRule = makeRuleCandidate({ relativePath: ".omo/rules/alpha.md" });
 
 		// when
 		const result = sortCandidates([zebraRule, alphaRule]);
@@ -98,12 +98,12 @@ describe("sortCandidates", () => {
 	it("#given user-home rule and project rule with distance 0 #when sorting #then project rule first regardless of distance", () => {
 		// given
 		const globalRule = makeRuleCandidate({
-			source: "~/.sisyphus/rules",
+			source: "~/.omo/rules",
 			distance: 0,
 			isGlobal: true,
 			relativePath: "",
 		});
-		const projectRule = makeRuleCandidate({ source: ".sisyphus/rules", distance: 0, isGlobal: false });
+		const projectRule = makeRuleCandidate({ source: ".omo/rules", distance: 0, isGlobal: false });
 
 		// when
 		const result = sortCandidates([globalRule, projectRule]);
@@ -112,7 +112,7 @@ describe("sortCandidates", () => {
 		expect(result).toEqual([projectRule, globalRule]);
 	});
 
-	it("#given user-home rules across different sources #when sorting #then ~/.sisyphus/rules before ~/.claude/rules", () => {
+	it("#given user-home rules across different sources #when sorting #then ~/.omo/rules before ~/.claude/rules", () => {
 		// given
 		const claudeRule = makeRuleCandidate({
 			source: "~/.claude/rules",
@@ -121,10 +121,10 @@ describe("sortCandidates", () => {
 			relativePath: ".claude/rules/typescript.md",
 		});
 		const sisyphusRule = makeRuleCandidate({
-			source: "~/.sisyphus/rules",
+			source: "~/.omo/rules",
 			distance: GLOBAL_DISTANCE,
 			isGlobal: true,
-			relativePath: ".sisyphus/rules/typescript.md",
+			relativePath: ".omo/rules/typescript.md",
 		});
 
 		// when
@@ -136,8 +136,8 @@ describe("sortCandidates", () => {
 
 	it("#given input array #when sorting #then input not mutated", () => {
 		// given
-		const zebraRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/zebra.md" });
-		const alphaRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/alpha.md" });
+		const zebraRule = makeRuleCandidate({ relativePath: ".omo/rules/zebra.md" });
+		const alphaRule = makeRuleCandidate({ relativePath: ".omo/rules/alpha.md" });
 		const candidates = [zebraRule, alphaRule];
 
 		// when
@@ -189,8 +189,8 @@ describe("sortCandidates", () => {
 describe("compareCandidates", () => {
 	it("#given lower-priority candidate on the right #when comparing #then returns negative", () => {
 		// given
-		const earlierRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/a.md" });
-		const laterRule = makeRuleCandidate({ relativePath: ".sisyphus/rules/b.md" });
+		const earlierRule = makeRuleCandidate({ relativePath: ".omo/rules/a.md" });
+		const laterRule = makeRuleCandidate({ relativePath: ".omo/rules/b.md" });
 
 		// when
 		const result = compareCandidates(earlierRule, laterRule);

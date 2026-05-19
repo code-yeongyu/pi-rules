@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { TRUNCATION_NOTICE } from "../src/rules/constants.js";
 import { truncateBudget, truncateRule } from "../src/rules/truncator.js";
 
-const relativePath = ".sisyphus/rules/typescript.md";
+const relativePath = ".omo/rules/typescript.md";
 
 function noticeFor(path: string): string {
 	return TRUNCATION_NOTICE.replace("{path}", path);

@@ -70,8 +70,8 @@ describe("markStaticInjected", () => {
 	it("#given two different rules #when marking both static injected #then both return true", () => {
 		// given
 		const state = createSessionState();
-		const firstRule = makeLoadedRule({ realPath: "/workspace/.sisyphus/rules/first.md" });
-		const secondRule = makeLoadedRule({ realPath: "/workspace/.sisyphus/rules/second.md" });
+		const firstRule = makeLoadedRule({ realPath: "/workspace/.omo/rules/first.md" });
+		const secondRule = makeLoadedRule({ realPath: "/workspace/.omo/rules/second.md" });
 
 		// when
 		const firstResult = markStaticInjected(state, firstRule);
@@ -85,7 +85,7 @@ describe("markStaticInjected", () => {
 	it("#given same realPath but different contentHash #when marking static injected #then both succeed (different keys)", () => {
 		// given
 		const state = createSessionState();
-		const realPath = "/workspace/.sisyphus/rules/shared.md";
+		const realPath = "/workspace/.omo/rules/shared.md";
 		const firstRule = makeLoadedRule({ realPath, contentHash: "first-hash" });
 		const secondRule = makeLoadedRule({ realPath, contentHash: "second-hash" });
 

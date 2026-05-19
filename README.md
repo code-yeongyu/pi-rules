@@ -2,11 +2,11 @@
 
 [![ci](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/badge/npm-%40code--yeongyu%2Fpi--rules-red)](https://www.npmjs.com/package/@code-yeongyu/pi-rules)
 
-Rule context loader for the [pi coding agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Discovers rule files from `.sisyphus/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `AGENTS.md`, `CLAUDE.md`, and injects them into the agent context.
+Rule context loader for the [pi coding agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Discovers rule files from `.omo/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `AGENTS.md`, `CLAUDE.md`, and injects them into the agent context.
 
 ## Origin
 
-pi-rules is inspired by [oh-my-openagent (omo)](https://github.com/code-yeongyu/oh-my-openagent) `.sisyphus/rules/` and opencode's `AGENTS.md` / `CLAUDE.md` instruction file mechanisms.
+pi-rules is inspired by [oh-my-openagent (omo)](https://github.com/code-yeongyu/oh-my-openagent) `.omo/rules/` and opencode's `AGENTS.md` / `CLAUDE.md` instruction file mechanisms.
 
 - [omo](https://github.com/code-yeongyu/oh-my-openagent) at https://github.com/code-yeongyu/oh-my-openagent is by Yeongyu Kim, originally SUL-1.0.
 - This package is an **independent** pi-coding-agent extension by the same author.
@@ -56,7 +56,7 @@ After installation, restart pi (or run `/reload` inside an interactive session).
 
 | Directory | Style |
 |-----------|-------|
-| `.sisyphus/rules/` | omo style |
+| `.omo/rules/` | omo style |
 | `.claude/rules/` | Claude Code style |
 | `.cursor/rules/` | Cursor style |
 | `.github/instructions/` | GitHub Copilot style (only `*.instructions.md`) |
@@ -78,7 +78,7 @@ These use **first-match-wins** at the project root: `AGENTS.md` takes priority o
 
 | Path | Type |
 |------|------|
-| `~/.sisyphus/rules/` | directory |
+| `~/.omo/rules/` | directory |
 | `~/.opencode/rules/` | directory |
 | `~/.claude/rules/` | directory |
 | `~/.config/opencode/AGENTS.md` | single-file |
@@ -117,7 +117,7 @@ Rules are ordered deterministically before injection:
 
 1. **Local before global** — project rules outrank user-home rules.
 2. **Closest distance first** — rules from directories nearer to the target file take priority.
-3. **Source priority** — `.sisyphus/rules` > `.claude/rules` > `.cursor/rules` > `.github/instructions` > `AGENTS.md` > `CLAUDE.md` > `CONTEXT.md` > user-home variants.
+3. **Source priority** — `.omo/rules` > `.claude/rules` > `.cursor/rules` > `.github/instructions` > `AGENTS.md` > `CLAUDE.md` > `CONTEXT.md` > user-home variants.
 4. **Lexicographic `relativePath`** — final tiebreaker for same-source, same-distance rules.
 
 Deduplication is in-memory per session by `realPath + content hash`. No filesystem persistence.
@@ -167,7 +167,7 @@ Rule files are prompt and context input. Do NOT load untrusted repositories. All
 
 | Symptom | Fix |
 |---------|-----|
-| No rules loaded | Verify `.sisyphus/rules/`, `AGENTS.md`, etc. exist in the project root or ancestors. Run `/rules` to inspect. |
+| No rules loaded | Verify `.omo/rules/`, `AGENTS.md`, etc. exist in the project root or ancestors. Run `/rules` to inspect. |
 | Rule not matching | Check frontmatter `globs` / `paths` / `applyTo`. Confirm the target file path matches the glob. |
 | Duplicate injection | Automatically deduplicated per session. Try `/reload-rules` to reset. |
 | Extension not loaded | Confirm `pi.extensions` in your `package.json` or use `pi -e ./src/index.ts` for one-shot. |

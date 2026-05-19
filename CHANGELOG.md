@@ -27,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial pi coding-agent extension that injects rules into the agent's system prompt and tool results.
-- Rule discovery from `.sisyphus/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, plus user-home equivalents.
+- Rule discovery from `.omo/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `.github/copilot-instructions.md`, `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md`, plus user-home equivalents.
 - YAML frontmatter parser supporting `description`, `globs`, `paths` (Claude alias), `applyTo` (Copilot alias), `alwaysApply`.
 - Glob matcher with picomatch, normalization of all glob aliases.
 - Walk-up project rule discovery from cwd to project root with deterministic precedence ordering.

@@ -1,7 +1,7 @@
 {
   "name": "@code-yeongyu/pi-rules",
   "version": "0.1.0",
-  "description": "Rule context loader extension for the pi coding agent. Discovers rule files from .sisyphus/rules/, .claude/rules/, .cursor/rules/, .github/instructions/, AGENTS.md, CLAUDE.md and injects them into the agent context. Inspired by oh-my-openagent (omo).",
+  "description": "Rule context loader extension for the pi coding agent. Discovers rule files from .omo/rules/, .claude/rules/, .cursor/rules/, .github/instructions/, AGENTS.md, CLAUDE.md and injects them into the agent context. Inspired by oh-my-openagent (omo).",
   "type": "module",
   "license": "MIT",
   "homepage": "https://github.com/code-yeongyu/pi-rules",
