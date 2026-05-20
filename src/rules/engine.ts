@@ -1,4 +1,4 @@
-import { realpathSync } from "node:fs";
+import { realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
@@ -57,6 +57,17 @@ export interface EngineDeps {
 	findProjectRoot: (startPath: string) => string | null;
 	extractToolPaths: (event: ToolResultEvent, cwd: string) => string[];
 	matchRule?: typeof matchRule;
+	/**
+	 * Returns a stable identifier for a rule file. Default uses `statSync` mtime/ctime/size.
+	 * Tests may inject a content-based fingerprint when fixtures use synthetic paths.
+	 */
+	fileFingerprint?: (filePath: string) => string;
+}
+
+export interface DynamicTargetFingerprint {
+	targetPath: string;
+	cacheKey: string;
+	fingerprint: string;
 }
 
 export interface Engine {
@@ -74,6 +85,23 @@ export interface Engine {
 	isDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
 	markStaticInjected(rule: LoadedRule): boolean;
 	markDynamicInjected(scopeKey: string, rule: LoadedRule): boolean;
+	/**
+	 * Computes a fingerprint for each unique target derived from its discovered
+	 * candidates plus their on-disk fingerprints. Pure - does not mutate state.
+	 */
+	fingerprintDynamicTargets(cwd: string, targetPaths: ReadonlyArray<string>): DynamicTargetFingerprint[];
+	/**
+	 * Returns true when the fingerprint for a target already matches the value
+	 * stored on `state.dynamicTargetFingerprints`. The hook layer skips
+	 * `loadDynamicRules` entirely when every target is current.
+	 */
+	isDynamicTargetFingerprintCurrent(target: DynamicTargetFingerprint): boolean;
+	/**
+	 * Commits the supplied fingerprints to `state.dynamicTargetFingerprints`.
+	 * Always pass every fingerprint observed during a hook invocation so the
+	 * map mirrors the latest discovery.
+	 */
+	commitDynamicTargetFingerprints(fingerprints: ReadonlyArray<DynamicTargetFingerprint>): void;
 }
 
 const ROOT_SINGLE_FILE_SOURCES = new Set(PROJECT_SINGLE_FILES.filter((source) => !source.includes("/")));
@@ -132,7 +160,6 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const candidateDiscoveryCache: CandidateDiscoveryCache = new Map();
 		const projectRootCache = new Map<string, string | null>();
 		const realPathCache: RealPathCache = new Map();
-
 		for (const targetFile of targetFiles) {
 			const projectRoot = shouldCacheLookups
 				? findProjectRootCached(projectRootCache, targetFile, deps.findProjectRoot)
@@ -185,6 +212,51 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		return { rules: sortedRules, diagnostics };
 	}
 
+	function fingerprintDynamicTargets(cwd: string, targetPaths: ReadonlyArray<string>): DynamicTargetFingerprint[] {
+		state.cwd = cwd;
+		if (config.disabled || config.mode === "off" || config.mode === "static" || targetPaths.length === 0) {
+			return [];
+		}
+
+		const fingerprintFn = deps.fileFingerprint ?? fileStatFingerprint;
+		const disabledSources = disabledSourcesFor(config);
+		const discoveryCache = createRuleDiscoveryCache();
+		const cwdProjectRoot = deps.findProjectRoot(cwd);
+		const fingerprints: DynamicTargetFingerprint[] = [];
+
+		for (const targetFile of uniqueStrings(targetPaths)) {
+			const projectRoot =
+				cwdProjectRoot !== null && isSameOrChildPath(targetFile, cwdProjectRoot)
+					? cwdProjectRoot
+					: deps.findProjectRoot(targetFile);
+			const findOptions: Parameters<EngineDeps["findCandidates"]>[0] = {
+				projectRoot,
+				targetFile,
+				cache: discoveryCache,
+				...(disabledSources === undefined ? {} : { disabledSources }),
+			};
+			const candidates = sortCandidates(deps.findCandidates(findOptions));
+			const cacheKey = dynamicTargetCacheKey(targetFile);
+			fingerprints.push({
+				targetPath: targetFile,
+				cacheKey,
+				fingerprint: computeDynamicTargetFingerprint(targetFile, projectRoot, candidates, config, fingerprintFn),
+			});
+		}
+
+		return fingerprints;
+	}
+
+	function commitDynamicTargetFingerprints(fingerprints: ReadonlyArray<DynamicTargetFingerprint>): void {
+		for (const target of fingerprints) {
+			state.dynamicTargetFingerprints.set(target.cacheKey, target.fingerprint);
+		}
+	}
+
+	function isDynamicTargetFingerprintCurrent(target: DynamicTargetFingerprint): boolean {
+		return state.dynamicTargetFingerprints.get(target.cacheKey) === target.fingerprint;
+	}
+
 	return {
 		state,
 		config,
@@ -208,7 +280,15 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		isDynamicInjected: (scopeKey, rule) => isDynamicInjectedInState(state, scopeKey, rule),
 		markStaticInjected: (rule) => markStaticInjectedInState(state, rule),
 		markDynamicInjected: (scopeKey, rule) => markDynamicInjectedInState(state, scopeKey, rule),
+		fingerprintDynamicTargets,
+		isDynamicTargetFingerprintCurrent,
+		commitDynamicTargetFingerprints,
 	};
+}
+
+function isSameOrChildPath(childPath: string, parentPath: string): boolean {
+	const childRelativePath = relative(parentPath, resolve(childPath));
+	return childRelativePath === "" || (!childRelativePath.startsWith("..") && !isAbsolute(childRelativePath));
 }
 
 function matchDynamicRuleCached(
@@ -533,6 +613,52 @@ function scopeDirectoryForCandidate(projectRoot: string, candidate: RuleCandidat
 
 function toPosixPath(path: string): string {
 	return path.replaceAll("\\", "/");
+}
+
+function dynamicTargetCacheKey(targetFile: string): string {
+	return toPosixPath(resolve(targetFile));
+}
+
+function computeDynamicTargetFingerprint(
+	targetFile: string,
+	projectRoot: string | null,
+	candidates: ReadonlyArray<RuleCandidate>,
+	config: PiRulesConfig,
+	fileFingerprintFn: (filePath: string) => string,
+): string {
+	const candidateFingerprint = candidates
+		.map((candidate) => fingerprintCandidate(candidate, fileFingerprintFn))
+		.join("\u0001");
+	return hashContent(
+		[
+			"v1",
+			config.enabledSources === "auto" ? "auto" : config.enabledSources.join(","),
+			projectRoot ?? "",
+			dynamicTargetCacheKey(targetFile),
+			candidateFingerprint,
+		].join("\u0000"),
+	);
+}
+
+function fingerprintCandidate(candidate: RuleCandidate, fileFingerprintFn: (filePath: string) => string): string {
+	return [
+		candidate.realPath,
+		candidate.relativePath,
+		candidate.source,
+		candidate.isGlobal ? "global" : "project",
+		candidate.isSingleFile ? "single" : "multi",
+		String(candidate.distance),
+		fileFingerprintFn(candidate.path),
+	].join("\u0000");
+}
+
+function fileStatFingerprint(filePath: string): string {
+	try {
+		const stats = statSync(filePath, { bigint: true });
+		return `${stats.mtimeNs}:${stats.ctimeNs}:${stats.size}`;
+	} catch {
+		return "missing";
+	}
 }
 
 function uniqueStrings(values: ReadonlyArray<string>): string[] {

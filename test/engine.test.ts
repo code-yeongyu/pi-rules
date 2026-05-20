@@ -2,7 +2,7 @@ import { realpathSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_MAX_RESULT_CHARS, DEFAULT_MAX_RULE_CHARS } from "../src/rules/constants.js";
-import { createEngine, defaultConfig, type EngineDeps } from "../src/rules/engine.js";
+import { createEngine, type DynamicTargetFingerprint, defaultConfig, type EngineDeps } from "../src/rules/engine.js";
 import { matchRule as defaultMatchRule } from "../src/rules/matcher.js";
 import type { LoadedRule, PiRulesConfig, RuleCandidate, RuleSource } from "../src/rules/types.js";
 import { createTempFs } from "./helpers/temp-fs.js";
@@ -857,6 +857,87 @@ describe("session state", () => {
 		// then
 		expect(firstResult).toBe(true);
 		expect(secondResult).toBe(false);
+	});
+
+	it("#given fingerprintDynamicTargets called twice for unchanged target #when commit #then second call short-circuits via isDynamicTargetFingerprintCurrent", () => {
+		// given
+		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
+		});
+		let findCandidatesCalls = 0;
+		const deps = {
+			findProjectRoot: () => PROJECT_ROOT,
+			findCandidates: () => {
+				findCandidatesCalls += 1;
+				return [candidate];
+			},
+			readFile: () => ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule."),
+			extractToolPaths: () => [],
+			fileFingerprint: () => "stable",
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const firstFingerprints = engine.fingerprintDynamicTargets(PROJECT_ROOT, [targetPath]);
+		expect(firstFingerprints).toHaveLength(1);
+		const firstFingerprint = firstFingerprints[0];
+		expect(firstFingerprint).toBeDefined();
+		expect(engine.isDynamicTargetFingerprintCurrent(firstFingerprint as DynamicTargetFingerprint)).toBe(false);
+		engine.commitDynamicTargetFingerprints(firstFingerprints);
+		const secondFingerprints = engine.fingerprintDynamicTargets(PROJECT_ROOT, [targetPath]);
+
+		// then
+		expect(secondFingerprints).toHaveLength(1);
+		const secondFingerprint = secondFingerprints[0];
+		expect(secondFingerprint).toBeDefined();
+		expect(engine.isDynamicTargetFingerprintCurrent(secondFingerprint as DynamicTargetFingerprint)).toBe(true);
+		expect(findCandidatesCalls).toBe(2);
+	});
+
+	it("#given fingerprintDynamicTargets called after fileFingerprint changes #when checked #then isDynamicTargetFingerprintCurrent returns false", () => {
+		// given
+		const targetPath = `${PROJECT_ROOT}/src/app.ts`;
+		const candidate = makeCandidate({
+			path: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			realPath: `${PROJECT_ROOT}/.omo/rules/typescript.md`,
+			relativePath: ".omo/rules/typescript.md",
+		});
+		let fingerprintValue = "version-a";
+		const deps = {
+			findProjectRoot: () => PROJECT_ROOT,
+			findCandidates: () => [candidate],
+			readFile: () => ruleMarkdown('globs: "src/**/*.ts"', "TypeScript rule."),
+			extractToolPaths: () => [],
+			fileFingerprint: () => fingerprintValue,
+		} satisfies EngineDeps;
+		const engine = createEngine(defaultConfig(), deps);
+
+		// when
+		const first = engine.fingerprintDynamicTargets(PROJECT_ROOT, [targetPath]);
+		engine.commitDynamicTargetFingerprints(first);
+		fingerprintValue = "version-b";
+		const second = engine.fingerprintDynamicTargets(PROJECT_ROOT, [targetPath]);
+		const secondFingerprint = second[0];
+
+		// then
+		expect(secondFingerprint).toBeDefined();
+		expect(engine.isDynamicTargetFingerprintCurrent(secondFingerprint as DynamicTargetFingerprint)).toBe(false);
+	});
+
+	it("#given resetSession #when previously committed fingerprints #then dynamicTargetFingerprints is cleared", () => {
+		// given
+		const engine = createTestEngine({}, [], new Map());
+		engine.commitDynamicTargetFingerprints([{ targetPath: "/x/y.ts", cacheKey: "/x/y.ts", fingerprint: "abc" }]);
+		expect(engine.state.dynamicTargetFingerprints.size).toBe(1);
+
+		// when
+		engine.resetSession(PROJECT_ROOT);
+
+		// then
+		expect(engine.state.dynamicTargetFingerprints.size).toBe(0);
 	});
 
 	it("#given previous loaded state #when loadStaticRules returns early #then public loaded state is cleared", () => {

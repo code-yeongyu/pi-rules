@@ -115,7 +115,18 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 			return undefined;
 		}
 
-		const loaded = engine.loadDynamicRules(ctx.cwd, targetPaths);
+		const fingerprints = engine.fingerprintDynamicTargets(ctx.cwd, targetPaths);
+		const pendingFingerprints = fingerprints.filter((target) => !engine.isDynamicTargetFingerprintCurrent(target));
+		if (pendingFingerprints.length === 0) {
+			engine.commitDynamicTargetFingerprints(fingerprints);
+			return undefined;
+		}
+
+		const loaded = engine.loadDynamicRules(
+			ctx.cwd,
+			pendingFingerprints.map((target) => target.targetPath),
+		);
+		engine.commitDynamicTargetFingerprints(fingerprints);
 		const rules = loaded.rules.filter(
 			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(firstTargetPath, rule),
 		);
@@ -123,7 +134,8 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 			return undefined;
 		}
 
-		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstTargetPath));
+		const firstPendingTarget = pendingFingerprints[0]?.targetPath ?? firstTargetPath;
+		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstPendingTarget));
 		for (const rule of rules) {
 			engine.markDynamicInjected(firstTargetPath, rule);
 		}

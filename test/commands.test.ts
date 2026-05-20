@@ -20,7 +20,14 @@ function createStubEngine(
 	const diagnostics = options.diagnostics ?? [];
 
 	return {
-		state: { cwd: "/tmp/test", staticDedup: new Set(), dynamicDedup: new Map(), loadedRules: rules, diagnostics },
+		state: {
+			cwd: "/tmp/test",
+			staticDedup: new Set(),
+			dynamicDedup: new Map(),
+			dynamicTargetFingerprints: new Map(),
+			loadedRules: rules,
+			diagnostics,
+		},
 		config: defaultConfig(),
 		loadStaticRules: options.loadStaticRules ?? (() => ({ rules, diagnostics })),
 		loadDynamicRules: () => ({ rules: [], diagnostics: [] }),
@@ -31,6 +38,9 @@ function createStubEngine(
 		isDynamicInjected: () => false,
 		markStaticInjected: () => true,
 		markDynamicInjected: () => true,
+		fingerprintDynamicTargets: () => [],
+		isDynamicTargetFingerprintCurrent: () => true,
+		commitDynamicTargetFingerprints: () => {},
 	};
 }
 

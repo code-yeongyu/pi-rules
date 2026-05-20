@@ -121,11 +121,15 @@ export interface PiRulesConfig {
  *
  * `staticDedup` keys are `{cwd}::{rulePath}::{contentHash}` strings.
  * `dynamicDedup` stores `{targetPath}::{rulePath}::{contentHash}` strings grouped by target file.
+ * `dynamicTargetFingerprints` maps a target file cache key to a digest of its
+ * discovered rule candidates + file stats; loadDynamicRules short-circuits
+ * targets whose fingerprint has not changed since the previous load.
  */
 export interface SessionState {
 	cwd: string | undefined;
 	staticDedup: Set<string>;
 	dynamicDedup: Map<string, Set<string>>;
+	dynamicTargetFingerprints: Map<string, string>;
 	loadedRules: LoadedRule[];
 	diagnostics: RuleDiagnostic[];
 }
