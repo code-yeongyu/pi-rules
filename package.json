@@ -59,11 +59,11 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
-    "@types/node": "^25.8.0",
+    "@types/node": "^25.9.1",
     "@types/picomatch": "^4.0.0",
-    "@typescript/native-preview": "^7.0.0-dev.20260514.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260519.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "engines": {
     "node": ">=20.0.0"
