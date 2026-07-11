@@ -1,7 +1,7 @@
 import { realpathSync, statSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
 
 import {
 	clearSession,

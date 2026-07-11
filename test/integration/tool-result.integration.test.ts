@@ -1,7 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { SessionStartEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { SessionStartEvent, ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";

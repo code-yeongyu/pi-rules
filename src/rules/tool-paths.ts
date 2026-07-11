@@ -1,6 +1,6 @@
 import { isAbsolute, resolve } from "node:path";
 
-import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
 
 import { TRACKED_BUILTIN_TOOL_SET } from "./constants.js";
 

@@ -1,7 +1,7 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { isAbsolute, relative } from "node:path";
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { registerSlashCommands } from "./commands.js";
 import { createEngine, defaultConfig } from "./rules/engine.js";

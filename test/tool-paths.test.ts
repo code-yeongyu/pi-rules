@@ -1,4 +1,4 @@
-import type { ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import { extractToolPaths, isTrackedTool } from "../src/rules/tool-paths.js";

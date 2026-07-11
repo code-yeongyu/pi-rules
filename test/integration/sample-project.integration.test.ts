@@ -2,7 +2,7 @@ import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { BeforeAgentStartEvent, SessionStartEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { BeforeAgentStartEvent, SessionStartEvent, ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";

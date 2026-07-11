@@ -1,5 +1,5 @@
 import { realpathSync } from "node:fs";
-import type { BeforeAgentStartEvent, SessionStartEvent, ToolResultEvent } from "@mariozechner/pi-coding-agent";
+import type { BeforeAgentStartEvent, SessionStartEvent, ToolResultEvent } from "@earendil-works/pi-coding-agent";
 import { afterEach, describe, expect, it } from "vitest";
 
 import piRulesExtension from "../src/index.js";

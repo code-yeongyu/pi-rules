@@ -5,8 +5,8 @@ import type {
 	ExtensionHandler,
 	RegisteredCommand,
 	ToolDefinition,
-} from "@mariozechner/pi-coding-agent";
-import { createEventBus } from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
+import { createEventBus } from "@earendil-works/pi-coding-agent";
 import type { TSchema } from "typebox";
 
 export interface CapturedTool {
@@ -108,6 +108,7 @@ export function createFakePi(): FakePiHarness {
 	};
 	const getFlag: ExtensionAPI["getFlag"] = (name) => flagValues.get(name);
 	const registerMessageRenderer: ExtensionAPI["registerMessageRenderer"] = () => {};
+	const registerEntryRenderer: ExtensionAPI["registerEntryRenderer"] = () => {};
 	const sendMessage: ExtensionAPI["sendMessage"] = () => {};
 	const sendUserMessage: ExtensionAPI["sendUserMessage"] = () => {};
 	const appendEntry: ExtensionAPI["appendEntry"] = (customType, data) => {
@@ -140,6 +141,7 @@ export function createFakePi(): FakePiHarness {
 		registerFlag,
 		getFlag,
 		registerMessageRenderer,
+		registerEntryRenderer,
 		sendMessage,
 		sendUserMessage,
 		appendEntry,
@@ -207,6 +209,8 @@ export function createFakePi(): FakePiHarness {
 			getContextUsage: () => undefined,
 			compact: () => {},
 			getSystemPrompt: () => "",
+			mode: "tui",
+			isProjectTrusted: () => true,
 		};
 		return { ...base, ...overrides } as ExtensionContext;
 	}

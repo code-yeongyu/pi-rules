@@ -1,5 +1,5 @@
-import { Theme } from "@mariozechner/pi-coding-agent";
-import { Container } from "@mariozechner/pi-tui";
+import { Theme } from "@earendil-works/pi-coding-agent";
+import { Container } from "@earendil-works/pi-tui";
 import { describe, expect, it } from "vitest";
 import { DynamicBorder } from "../src/ui/dynamic-border.js";
 import { RulesBanner, renderBannerLines, statusLineText } from "../src/ui/rules-banner.js";

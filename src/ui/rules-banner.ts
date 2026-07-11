@@ -1,5 +1,5 @@
-import type { Theme } from "@mariozechner/pi-coding-agent";
-import { Container } from "@mariozechner/pi-tui";
+import type { Theme } from "@earendil-works/pi-coding-agent";
+import { Container } from "@earendil-works/pi-tui";
 import type { LoadedRule, RuleDiagnostic } from "../rules/types.js";
 import { DynamicBorder } from "./dynamic-border.js";
 
