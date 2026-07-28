@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `findProjectRoot` no longer loops forever when the target path is on a different Windows drive than the process cwd (or on a UNC share): the walk now stops when `dirname()` stops progressing instead of only at `resolve("/")`. The infinite synchronous loop froze the host agent's event loop at 100% CPU on every `read`/`edit`/`write` tool result for such paths.
 - Dynamic rule injection now dedupes by rule across the session instead of per tool call, preventing repeated nested `AGENTS.md`/`CLAUDE.md` instruction blocks on subsequent reads.
 - Dynamic injection now skips rules already injected statically or already loaded by pi's native context loader.
 - Dynamic rule loading now preserves each target file's project root so nested projects load their nearest rules correctly.
