@@ -25,6 +25,13 @@ export function findProjectRoot(startPath: string, markers: ReadonlyArray<string
 			return null;
 		}
 
-		currentDirectory = dirname(currentDirectory);
+		const parentDirectory = dirname(currentDirectory);
+		// Cross-drive / UNC walk: dirname() of a drive root returns the root itself,
+		// and a root on a different drive than cwd never equals resolve("/"), so the
+		// walk would spin forever without this guard.
+		if (parentDirectory === currentDirectory) {
+			return null;
+		}
+		currentDirectory = parentDirectory;
 	}
 }
