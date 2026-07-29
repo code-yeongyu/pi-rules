@@ -16,30 +16,31 @@ function formatRule(rule: TruncatedRule): string {
 	return `Instructions from: ${rule.path}\n${rule.body}`;
 }
 
-function truncateRules(rules: ReadonlyArray<LoadedRule>, options: FormatOptions): TruncatedRule[] {
-	const perRuleTruncated = rules.map((rule) => ({
-		path: rule.path,
-		relativePath: rule.relativePath,
-		body: truncateRule(rule.body, { maxChars: options.maxRuleChars, relativePath: rule.relativePath }).body,
-	}));
-	const budgetedRules = truncateBudget({
-		rules: perRuleTruncated.map((rule) => ({ body: rule.body, relativePath: rule.relativePath })),
-		maxResultChars: options.maxResultChars,
-	});
+function truncateRules(rules: ReadonlyArray<LoadedRule>, options: FormatOptions, blockHeader: string): TruncatedRule[] {
 	const truncatedRules: TruncatedRule[] = [];
+	let remainingBudget = options.maxResultChars - blockHeader.length;
 
-	for (let index = 0; index < budgetedRules.length; index += 1) {
-		const sourceRule = perRuleTruncated[index];
-		const budgetedRule = budgetedRules[index];
-		if (sourceRule === undefined || budgetedRule === undefined) {
-			continue;
+	for (const rule of rules) {
+		const perRuleBody = truncateRule(rule.body, {
+			maxChars: options.maxRuleChars,
+			relativePath: rule.relativePath,
+		}).body;
+		const separator = truncatedRules.length === 0 ? "" : "\n\n";
+		const ruleHeader = `${separator}Instructions from: ${rule.path}\n`;
+		const budgetedRule = truncateBudget({
+			rules: [{ body: perRuleBody, relativePath: rule.relativePath }],
+			maxResultChars: remainingBudget - ruleHeader.length,
+		})[0];
+		if (budgetedRule === undefined) {
+			break;
 		}
 
 		truncatedRules.push({
-			path: sourceRule.path,
+			path: rule.path,
 			relativePath: budgetedRule.relativePath,
 			body: budgetedRule.body,
 		});
+		remainingBudget -= ruleHeader.length + budgetedRule.body.length;
 	}
 
 	return truncatedRules;
@@ -50,7 +51,9 @@ export function formatStaticBlock(rules: ReadonlyArray<LoadedRule>, options: For
 		return "";
 	}
 
-	return `\n\n## Project Instructions\n${truncateRules(rules, options).map(formatRule).join("\n\n")}`;
+	const blockHeader = "\n\n## Project Instructions\n";
+	const truncatedRules = truncateRules(rules, options, blockHeader);
+	return truncatedRules.length === 0 ? "" : `${blockHeader}${truncatedRules.map(formatRule).join("\n\n")}`;
 }
 
 export function formatDynamicBlock(
@@ -62,7 +65,7 @@ export function formatDynamicBlock(
 		return "";
 	}
 
-	return `\n\nAdditional project instructions matched for ${targetRelativePath}:\n\n${truncateRules(rules, options)
-		.map(formatRule)
-		.join("\n\n")}`;
+	const blockHeader = `\n\nAdditional project instructions matched for ${targetRelativePath}:\n\n`;
+	const truncatedRules = truncateRules(rules, options, blockHeader);
+	return truncatedRules.length === 0 ? "" : `${blockHeader}${truncatedRules.map(formatRule).join("\n\n")}`;
 }
