@@ -17,8 +17,13 @@ export function findProjectRoot(startPath: string, markers: ReadonlyArray<string
 		return null;
 	}
 
-	const startStats = statSync(resolvedStartPath);
-	let currentDirectory = startStats.isDirectory() ? resolvedStartPath : dirname(resolvedStartPath);
+	let currentDirectory: string;
+	try {
+		const startStats = statSync(resolvedStartPath);
+		currentDirectory = startStats.isDirectory() ? resolvedStartPath : dirname(resolvedStartPath);
+	} catch {
+		return null;
+	}
 	const filesystemRoot = resolve("/");
 
 	while (true) {
