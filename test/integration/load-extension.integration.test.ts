@@ -28,10 +28,12 @@ function registerExtensionWithObservedSurface(): RegistrationSurface {
 		messageRendererRegistrations += 1;
 		return harness.pi.registerMessageRenderer(...parameters);
 	};
-	const registerProvider: ExtensionAPI["registerProvider"] = (...parameters) => {
-		providerRegistrations += 1;
-		return harness.pi.registerProvider(...parameters);
-	};
+	const registerProvider = new Proxy(harness.pi.registerProvider, {
+		apply(target, thisArg, argumentsList) {
+			providerRegistrations += 1;
+			return Reflect.apply(target, thisArg, argumentsList);
+		},
+	});
 
 	piRulesExtension({ ...harness.pi, registerMessageRenderer, registerProvider });
 
