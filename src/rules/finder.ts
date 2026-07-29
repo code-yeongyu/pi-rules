@@ -177,6 +177,7 @@ function findUserHomeCandidates(
 			isSingleFile: true,
 			relativePath: toRelativePath(homeDirectory, filePath),
 		});
+		break;
 	}
 
 	return candidates;

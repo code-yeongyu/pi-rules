@@ -64,7 +64,7 @@ describe("formatStaticBlock", () => {
 		});
 
 		// when
-		const result = formatStaticBlock([firstRule, secondRule], { maxRuleChars: 100, maxResultChars: 100 });
+		const result = formatStaticBlock([firstRule, secondRule], { maxRuleChars: 100, maxResultChars: 500 });
 
 		// then
 		expect(result).toContain("Instructions from: /project/AGENTS.md\nFirst rule.");
@@ -90,12 +90,27 @@ describe("formatStaticBlock", () => {
 		const firstRule = makeLoadedRule({ path: "/project/first.md", relativePath: "first.md", body: "first" });
 		const secondRule = makeLoadedRule({ path: "/project/second.md", relativePath: "second.md", body: "second" });
 
+		const maxResultChars = "\n\n## Project Instructions\nInstructions from: /project/first.md\nfirst".length;
+
 		// when
-		const result = formatStaticBlock([firstRule, secondRule], { maxRuleChars: 100, maxResultChars: "first".length });
+		const result = formatStaticBlock([firstRule, secondRule], { maxRuleChars: 100, maxResultChars });
 
 		// then
 		expect(result).toContain("Instructions from: /project/first.md\nfirst");
 		expect(result).not.toContain("Instructions from: /project/second.md");
+	});
+
+	it("#given rule body fills the result budget #when formatting static #then framing is included in the budget", () => {
+		// given
+		const maxResultChars = 200;
+		const rule = makeLoadedRule({ body: "a".repeat(maxResultChars) });
+
+		// when
+		const result = formatStaticBlock([rule], { maxRuleChars: maxResultChars, maxResultChars });
+
+		// then
+		expect(result).toContain("Instructions from:");
+		expect(result.length).toBeLessThanOrEqual(maxResultChars);
 	});
 
 	it("#given rule with multiline body #when formatting #then preserves newlines", () => {
@@ -104,7 +119,7 @@ describe("formatStaticBlock", () => {
 		const rule = makeLoadedRule({ body });
 
 		// when
-		const result = formatStaticBlock([rule], { maxRuleChars: 100, maxResultChars: 100 });
+		const result = formatStaticBlock([rule], { maxRuleChars: 100, maxResultChars: 500 });
 
 		// then
 		expect(result).toContain(body);
@@ -139,7 +154,7 @@ describe("formatDynamicBlock", () => {
 		const rule = makeLoadedRule();
 
 		// when
-		const result = formatDynamicBlock([rule], "src/index.ts", { maxRuleChars: 100, maxResultChars: 100 });
+		const result = formatDynamicBlock([rule], "src/index.ts", { maxRuleChars: 100, maxResultChars: 500 });
 
 		// then
 		expect(result.startsWith("\n\nAdditional project instructions matched for src/index.ts:")).toBe(true);
@@ -153,7 +168,7 @@ describe("formatDynamicBlock", () => {
 		// when
 		const result = formatDynamicBlock([firstRule, secondRule], "src/index.ts", {
 			maxRuleChars: 100,
-			maxResultChars: 100,
+			maxResultChars: 500,
 		});
 
 		// then
@@ -178,12 +193,25 @@ describe("formatDynamicBlock", () => {
 		expect(result).toContain(notice);
 	});
 
+	it("#given rule body fills the result budget #when formatting dynamic #then framing is included in the budget", () => {
+		// given
+		const maxResultChars = 200;
+		const rule = makeLoadedRule({ body: "d".repeat(maxResultChars) });
+
+		// when
+		const result = formatDynamicBlock([rule], "src/index.ts", { maxRuleChars: maxResultChars, maxResultChars });
+
+		// then
+		expect(result).toContain("Instructions from:");
+		expect(result.length).toBeLessThanOrEqual(maxResultChars);
+	});
+
 	it("#given output starts with double newline #when formatting dynamic #then ready to append to tool result content", () => {
 		// given
 		const rule = makeLoadedRule();
 
 		// when
-		const result = formatDynamicBlock([rule], "src/index.ts", { maxRuleChars: 100, maxResultChars: 100 });
+		const result = formatDynamicBlock([rule], "src/index.ts", { maxRuleChars: 100, maxResultChars: 500 });
 
 		// then
 		expect(result.startsWith("\n\n")).toBe(true);

@@ -1,7 +1,33 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+const fsMock = vi.hoisted(() => ({
+	forceExists: false,
+	statError: null as NodeJS.ErrnoException | null,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:fs")>();
+	return {
+		...actual,
+		existsSync: (path: Parameters<typeof actual.existsSync>[0]) =>
+			fsMock.forceExists ? true : actual.existsSync(path),
+		statSync: (...args: Parameters<typeof actual.statSync>) => {
+			if (fsMock.statError !== null) {
+				throw fsMock.statError;
+			}
+			return actual.statSync(...args);
+		},
+	};
+});
+
+import { realpathSync } from "node:fs";
 
 import { findProjectRoot } from "../src/rules/project-root.js";
 import { createTempFs } from "./helpers/temp-fs.js";
+
+function canonicalPath(path: string): string {
+	return realpathSync.native(path);
+}
 
 describe("findProjectRoot", () => {
 	it("#given dir with .git marker #when finding root #then returns that dir", () => {
@@ -15,7 +41,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -32,7 +58,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -49,7 +75,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -67,7 +93,26 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(filePath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given file reached through a symlink outside its project #when finding root #then resolves the project's marker", () => {
+		// given
+		const tempFs = createTempFs();
+		const root = tempFs.mkdir("repo");
+		tempFs.writeJson("repo/package.json", { name: "repo" });
+		tempFs.write("repo/src/index.ts", "export const value = 1;\n");
+		const linkedDirectory = tempFs.symlink("repo/src", "outside/linked-src");
+
+		try {
+			// when
+			const result = findProjectRoot(`${linkedDirectory}/index.ts`);
+
+			// then
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -86,7 +131,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(innerRoot);
+			expect(result).toBe(canonicalPath(innerRoot));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -124,6 +169,28 @@ describe("findProjectRoot", () => {
 		}
 	});
 
+	it("#given start path disappears after existence check #when finding root #then returns null without throwing", () => {
+		// given
+		const tempFs = createTempFs();
+		const startPath = tempFs.mkdir("repo");
+		const statError = new Error("No such file or directory") as NodeJS.ErrnoException;
+		statError.code = "ENOENT";
+		fsMock.forceExists = true;
+		fsMock.statError = statError;
+
+		try {
+			// when
+			const result = findProjectRoot(startPath);
+
+			// then
+			expect(result).toBeNull();
+		} finally {
+			fsMock.forceExists = false;
+			fsMock.statError = null;
+			tempFs.cleanup();
+		}
+	});
+
 	it("#given custom markers list #when finding root #then uses that list instead of defaults", () => {
 		// given
 		const tempFs = createTempFs();
@@ -137,7 +204,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath, ["custom.marker"]);
 
 			// then
-			expect(result).toBe(customRoot);
+			expect(result).toBe(canonicalPath(customRoot));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -155,7 +222,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -173,7 +240,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -191,7 +258,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}

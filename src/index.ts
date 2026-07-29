@@ -54,11 +54,11 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_start", async (event, ctx) => {
 		syncConfigFromFlags();
+		engine.resetSession(ctx.cwd);
 		if (engine.config.disabled) {
 			return undefined;
 		}
 
-		engine.resetSession(ctx.cwd);
 		pi.appendEntry("pi-rules.scan", { cwd: ctx.cwd, reason: event.reason });
 		return undefined;
 	});

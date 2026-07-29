@@ -186,6 +186,25 @@ describe("renderBannerLines", () => {
 
 		expect(lines.some((l) => l.includes("⚠ 2 warning(s)"))).toBe(true);
 	});
+
+	it("shows a warning indicator when a rule diagnostic uses the rule's absolute path", () => {
+		// given
+		const rulePath = "/project/.omo/rules/bad.md";
+
+		// when
+		const lines = renderBannerLines(
+			{
+				ruleCount: 1,
+				diagnostics: [{ severity: "warning", source: rulePath, message: "Invalid frontmatter" }],
+				topRules: [{ path: rulePath, relativePath: ".omo/rules/bad.md", matchReason: "alwaysApply" }],
+			},
+			fakeTheme,
+			80,
+		);
+
+		// then
+		expect(lines.some((line) => line.includes("⚠ .omo/rules/bad.md"))).toBe(true);
+	});
 });
 
 describe("statusLineText", () => {

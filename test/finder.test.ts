@@ -215,6 +215,22 @@ describe("findRuleCandidates", () => {
 		});
 	});
 
+	it("#given multiple user-home single-file candidates #when finding #then only the highest-priority candidate is returned", () => {
+		// given
+		const tempFileSystem = createTrackedTempFs();
+		const homeDir = tempFileSystem.mkdir("home");
+		tempFileSystem.write("home/.config/opencode/AGENTS.md", "OpenCode agent rule.");
+		tempFileSystem.write("home/.claude/CLAUDE.md", "Claude rule.");
+
+		// when
+		const result = findRuleCandidates({ projectRoot: null, targetFile: null, homeDir });
+
+		// then
+		expect(result.filter((candidate) => candidate.isSingleFile).map((candidate) => candidate.source)).toEqual([
+			"~/.config/opencode/AGENTS.md",
+		]);
+	});
+
 	it('#given disabledSources contains ".cursor/rules" #when finding #then no .cursor candidates', () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();

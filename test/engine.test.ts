@@ -429,6 +429,38 @@ describe("loadDynamicRules", () => {
 		expect(result.rules[0]?.matchReason).toBe("alwaysApply");
 	});
 
+	it("#given AGENTS.md and CLAUDE.md at project root #when loadDynamicRules #then only the higher-priority file is included", () => {
+		// given
+		const agents = makeCandidate({
+			path: `${PROJECT_ROOT}/AGENTS.md`,
+			realPath: `${PROJECT_ROOT}/AGENTS.md`,
+			source: "AGENTS.md",
+			isSingleFile: true,
+			relativePath: "AGENTS.md",
+		});
+		const claude = makeCandidate({
+			path: `${PROJECT_ROOT}/CLAUDE.md`,
+			realPath: `${PROJECT_ROOT}/CLAUDE.md`,
+			source: "CLAUDE.md",
+			isSingleFile: true,
+			relativePath: "CLAUDE.md",
+		});
+		const engine = createTestEngine(
+			{},
+			[claude, agents],
+			new Map([
+				[agents.path, "Agents rule."],
+				[claude.path, "Claude rule."],
+			]),
+		);
+
+		// when
+		const result = engine.loadDynamicRules(PROJECT_ROOT, [`${PROJECT_ROOT}/index.ts`]);
+
+		// then
+		expect(result.rules.map((rule) => rule.source)).toEqual(["AGENTS.md"]);
+	});
+
 	it("#given multiple matching rules #when loadDynamicRules #then sorted via ordering (closest first)", () => {
 		// given
 		const rootRule = makeCandidate({

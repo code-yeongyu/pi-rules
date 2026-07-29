@@ -160,6 +160,7 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const candidateDiscoveryCache: CandidateDiscoveryCache = new Map();
 		const projectRootCache = new Map<string, string | null>();
 		const realPathCache: RealPathCache = new Map();
+		const rootSingleFileSelections = new Set<string>();
 		for (const targetFile of targetFiles) {
 			const projectRoot = shouldCacheLookups
 				? findProjectRootCached(projectRootCache, targetFile, deps.findProjectRoot)
@@ -175,6 +176,11 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 				: sortCandidates(deps.findCandidates(findOptions));
 
 			for (const candidate of candidates) {
+				const rootSingleFileSelectionKey = rootSingleFileSelectionKeyFor(candidate, projectRoot);
+				if (rootSingleFileSelectionKey !== null && rootSingleFileSelections.has(rootSingleFileSelectionKey)) {
+					continue;
+				}
+
 				const loadedRule = loadCandidate(candidate, deps, diagnostics, projectRoot, {
 					loadedRuleContent,
 					projectMembership,
@@ -195,6 +201,10 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 
 				if (matchReason === null) {
 					continue;
+				}
+
+				if (rootSingleFileSelectionKey !== null) {
+					rootSingleFileSelections.add(rootSingleFileSelectionKey);
 				}
 
 				const dedupKey = ruleDedupKey(loadedRule);
@@ -567,7 +577,15 @@ function isDedupedRootSingleFile(candidate: RuleCandidate, rootSingleFileSelecte
 }
 
 function isRootSingleFile(candidate: RuleCandidate): boolean {
-	return candidate.distance === 0 && candidate.isSingleFile && ROOT_SINGLE_FILE_SOURCES.has(candidate.source);
+	return (
+		candidate.isSingleFile &&
+		ROOT_SINGLE_FILE_SOURCES.has(candidate.source) &&
+		candidate.relativePath === candidate.source
+	);
+}
+
+function rootSingleFileSelectionKeyFor(candidate: RuleCandidate, projectRoot: string | null): string | null {
+	return projectRoot !== null && isRootSingleFile(candidate) ? projectRoot : null;
 }
 
 function pathBasesForTarget(

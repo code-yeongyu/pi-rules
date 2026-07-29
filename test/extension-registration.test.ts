@@ -201,6 +201,27 @@ describe("piRulesExtension", () => {
 		expect(secondResult).toMatchObject({ systemPrompt: expect.stringContaining("Use project rules.") });
 	});
 
+	it("#given disabled session between active sessions #when re-enabled #then previously injected rules are injected again", async () => {
+		// given
+		const project = createProject();
+		project.write("AGENTS.md", "Use project rules.");
+		const fakePi = registerExtension();
+		const cwd = projectCwd(project);
+		const ctx = fakePi.makeCtx({ cwd });
+		const event = beforeAgentStartEvent(cwd);
+
+		// when
+		await fakePi.emit("session_start", sessionStartEvent(), ctx);
+		await fakePi.emit("before_agent_start", event, ctx);
+		fakePi.flagValues.set("pi-rules-disabled", true);
+		await fakePi.emit("session_start", sessionStartEvent("new"), ctx);
+		fakePi.flagValues.set("pi-rules-disabled", false);
+		const result = await fakePi.emit("before_agent_start", event, ctx);
+
+		// then
+		expect(result).toMatchObject({ systemPrompt: expect.stringContaining("Use project rules.") });
+	});
+
 	it("#given before_agent_start with no rules in cwd #when handler runs #then returns undefined", async () => {
 		// given
 		const project = createProject();
