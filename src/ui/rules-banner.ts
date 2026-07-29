@@ -6,7 +6,7 @@ import { DynamicBorder } from "./dynamic-border.js";
 export interface RulesBannerProps {
 	ruleCount: number;
 	diagnostics: ReadonlyArray<RuleDiagnostic>;
-	topRules?: ReadonlyArray<Pick<LoadedRule, "relativePath" | "matchReason">>;
+	topRules?: ReadonlyArray<Pick<LoadedRule, "relativePath" | "matchReason"> & { path?: string }>;
 }
 
 export class RulesBanner extends Container {
@@ -43,7 +43,9 @@ export function renderBannerLines(props: RulesBannerProps, theme: Theme, width: 
 
 	if (props.topRules) {
 		for (const rule of props.topRules) {
-			const hasDiagnostic = props.diagnostics.some((diagnostic) => diagnostic.source === rule.relativePath);
+			const hasDiagnostic = props.diagnostics.some(
+				(diagnostic) => diagnostic.source === rule.path || diagnostic.source === rule.relativePath,
+			);
 			const indicator = hasDiagnostic ? theme.fg("error", "⚠") : theme.fg("success", "●");
 
 			let annotation = "";
