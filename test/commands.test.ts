@@ -114,6 +114,18 @@ describe("registerSlashCommands", () => {
 		expect(fakePi.notifications).toEqual([{ message: "Rule not found: missing.md", severity: "error" }]);
 	});
 
+	it('#given /rules with "show" and one loaded rule #when invoked without an id #then notify error severity', async () => {
+		// given
+		const fakePi = registerCommands();
+		const command = fakePi.commands.find((candidate) => candidate.name === "rules");
+
+		// when
+		await command?.options.handler("show", fakePi.makeCommandCtx({ cwd: "/tmp/test" }));
+
+		// then
+		expect(fakePi.notifications).toEqual([{ message: "Rule ID is required", severity: "error" }]);
+	});
+
 	it('#given /rules with "paths" subcommand #when invoked #then notify with absolute paths', async () => {
 		// given
 		const firstRule = makeLoadedRule({ path: "/tmp/test/foo.md", relativePath: "foo.md" });
