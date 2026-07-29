@@ -1,7 +1,12 @@
+import { realpathSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { findProjectRoot } from "../src/rules/project-root.js";
 import { createTempFs } from "./helpers/temp-fs.js";
+
+function canonicalPath(path: string): string {
+	return realpathSync.native(path);
+}
 
 describe("findProjectRoot", () => {
 	it("#given dir with .git marker #when finding root #then returns that dir", () => {
@@ -15,7 +20,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -32,7 +37,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -49,7 +54,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -67,7 +72,26 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(filePath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given file reached through a symlink outside its project #when finding root #then resolves the project's marker", () => {
+		// given
+		const tempFs = createTempFs();
+		const root = tempFs.mkdir("repo");
+		tempFs.writeJson("repo/package.json", { name: "repo" });
+		tempFs.write("repo/src/index.ts", "export const value = 1;\n");
+		const linkedDirectory = tempFs.symlink("repo/src", "outside/linked-src");
+
+		try {
+			// when
+			const result = findProjectRoot(`${linkedDirectory}/index.ts`);
+
+			// then
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -86,7 +110,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(innerRoot);
+			expect(result).toBe(canonicalPath(innerRoot));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -137,7 +161,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath, ["custom.marker"]);
 
 			// then
-			expect(result).toBe(customRoot);
+			expect(result).toBe(canonicalPath(customRoot));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -155,7 +179,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(root);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -173,7 +197,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -191,7 +215,7 @@ describe("findProjectRoot", () => {
 			const result = findProjectRoot(startPath);
 
 			// then
-			expect(result).toBe(root);
+			expect(result).toBe(canonicalPath(root));
 		} finally {
 			tempFs.cleanup();
 		}

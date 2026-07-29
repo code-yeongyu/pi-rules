@@ -1,12 +1,19 @@
-import { existsSync, statSync } from "node:fs";
+import { existsSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { PROJECT_MARKERS } from "./constants.js";
 
 export function findProjectRoot(startPath: string, markers: ReadonlyArray<string> = PROJECT_MARKERS): string | null {
-	const resolvedStartPath = resolve(startPath);
+	const normalizedStartPath = resolve(startPath);
 
-	if (!existsSync(resolvedStartPath)) {
+	if (!existsSync(normalizedStartPath)) {
+		return null;
+	}
+
+	let resolvedStartPath: string;
+	try {
+		resolvedStartPath = realpathSync.native(normalizedStartPath);
+	} catch {
 		return null;
 	}
 
