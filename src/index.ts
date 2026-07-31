@@ -4,7 +4,8 @@ import { isAbsolute, relative } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 import { registerSlashCommands } from "./commands.js";
-import { createEngine, defaultConfig } from "./rules/engine.js";
+import { configFromEnvironment } from "./config.js";
+import { createEngine } from "./rules/engine.js";
 import { findRuleCandidates } from "./rules/finder.js";
 import { findProjectRoot } from "./rules/project-root.js";
 import { extractToolPaths } from "./rules/tool-paths.js";
@@ -25,7 +26,8 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		default: "both",
 		description: "Rule injection mode: static, dynamic, both, or off.",
 	});
-	const config = defaultConfig();
+	const config = configFromEnvironment();
+	const envDisabled = config.disabled;
 	const engine = createEngine(config, {
 		findCandidates: findRuleCandidates,
 		readFile: (path) => {
@@ -45,7 +47,9 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		const mode = pi.getFlag("pi-rules-mode");
 
 		if (typeof disabled === "boolean") {
-			engine.config.disabled = disabled;
+			// Boolean flags are presence-only, so `false` means "flag not passed" and must not
+			// clear a disable that came from PI_RULES_DISABLED.
+			engine.config.disabled = disabled || envDisabled;
 		}
 		if (typeof mode === "string" && isPiRulesMode(mode)) {
 			engine.config.mode = mode;
