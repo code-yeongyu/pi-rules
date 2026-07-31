@@ -27,6 +27,8 @@ function isTruthy(value: string | undefined): boolean {
 
 function parsePositiveInteger(value: string | undefined): number | undefined {
 	if (value === undefined) return undefined;
-	const parsed = Number.parseInt(value.trim(), 10);
+	const normalized = value.trim();
+	if (!/^\d+$/.test(normalized)) return undefined;
+	const parsed = Number(normalized);
 	return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
 }

@@ -88,6 +88,22 @@ describe("configFromEnvironment", () => {
 		}
 	});
 
+	it("#given numeric-prefixed but malformed env values #when resolving config #then defaults preserved", () => {
+		// given
+		const malformedValues = ["1.5", "50abc", "1e3", "+50", "0x10"];
+
+		// when
+		const results = malformedValues.map((value) =>
+			configFromEnvironment({ PI_RULES_MAX_RULE_CHARS: value, PI_RULES_MAX_RESULT_CHARS: value }),
+		);
+
+		// then
+		for (const result of results) {
+			expect(result.maxRuleChars).toBe(12000);
+			expect(result.maxResultChars).toBe(40000);
+		}
+	});
+
 	it("#given PI_RULES_MAX_RULE_CHARS with surrounding whitespace #when resolving config #then value is trimmed and parsed", () => {
 		// given
 		const env = { PI_RULES_MAX_RULE_CHARS: " 50 " };
