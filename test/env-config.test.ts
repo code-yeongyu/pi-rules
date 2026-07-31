@@ -119,13 +119,21 @@ function truncationNoticeFor(relativePath: string): string {
 	return TRUNCATION_NOTICE.replace("{path}", relativePath);
 }
 
+function ruleBodyOf(injected: string): string {
+	const headerIndex = injected.indexOf("Instructions from: ");
+	return injected.slice(injected.indexOf("\n", headerIndex) + 1);
+}
+
+function blockOverheadFor(rulePath: string): number {
+	return `\n\n## Project Instructions\nInstructions from: ${rulePath}\n`.length;
+}
+
 describe("piRulesExtension environment configuration", () => {
-	it("#given PI_RULES_MAX_RULE_CHARS=50 and PI_RULES_MAX_RESULT_CHARS=200 and a project rule body far longer than 50 chars #when before_agent_start is emitted #then the injected block respects the caps and carries the truncation notice", async () => {
+	it("#given PI_RULES_MAX_RULE_CHARS=50 and a project rule body far longer than 50 chars #when before_agent_start is emitted #then the rule body is capped at 50 chars and carries the truncation notice", async () => {
 		// given
 		const project = createProject();
 		project.write("AGENTS.md", "x".repeat(5000));
 		process.env["PI_RULES_MAX_RULE_CHARS"] = "50";
-		process.env["PI_RULES_MAX_RESULT_CHARS"] = "200";
 		const fakePi = registerExtension();
 		const cwd = projectCwd(project);
 
@@ -134,7 +142,27 @@ describe("piRulesExtension environment configuration", () => {
 
 		// then
 		const injected = injectedBlock(result);
-		expect(injected.length).toBeLessThanOrEqual(200);
+		expect(ruleBodyOf(injected)).toHaveLength(50);
+		expect(injected).toContain(truncationNoticeFor("AGENTS.md"));
+	});
+
+	it("#given PI_RULES_MAX_RESULT_CHARS smaller than the rule and no per-rule cap #when before_agent_start is emitted #then the injected block stays inside the result budget", async () => {
+		// given
+		const project = createProject();
+		const rulePath = realpathSync.native(project.write("AGENTS.md", "x".repeat(5000)));
+		const overhead = blockOverheadFor(rulePath);
+		const budget = overhead + truncationNoticeFor("AGENTS.md").length + 50;
+		process.env["PI_RULES_MAX_RESULT_CHARS"] = String(budget);
+		const fakePi = registerExtension();
+		const cwd = projectCwd(project);
+
+		// when
+		const result = await fakePi.emit("before_agent_start", beforeAgentStartEvent(cwd), fakePi.makeCtx({ cwd }));
+
+		// then
+		const injected = injectedBlock(result);
+		expect(injected.length).toBeLessThanOrEqual(budget);
+		expect(injected.length).toBeGreaterThan(overhead);
 		expect(injected).toContain(truncationNoticeFor("AGENTS.md"));
 	});
 
