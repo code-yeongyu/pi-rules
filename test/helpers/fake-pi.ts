@@ -201,6 +201,7 @@ export function createFakePi(): FakePiHarness {
 			sessionManager: { listSessions: () => [], getSession: () => undefined },
 			modelRegistry: { listModels: () => [], getModel: () => undefined },
 			model: undefined,
+			scopedModels: [],
 			thinkingLevel: "medium",
 			isIdle: () => true,
 			signal: undefined,

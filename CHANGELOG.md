@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Raised the supported pi runtime baseline to `0.83.0` and aligned the exhaustive extension-context fixture.
 - Glob matching now reuses a bounded compiled matcher cache instead of recompiling picomatch patterns for every file.
 - Dynamic rule loading now deduplicates repeated target paths and rule-file parsing work.
 
