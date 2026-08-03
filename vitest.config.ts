@@ -7,5 +7,6 @@ export default defineConfig({
 		include: ["test/**/*.test.ts"],
 		exclude: isTargetingIntegration ? [] : ["test/integration/**"],
 		environment: "node",
+		setupFiles: ["./test/setup.ts"],
 	},
 });
