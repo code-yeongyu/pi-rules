@@ -74,7 +74,7 @@ function textContent(result: ToolResult): string {
 }
 
 describe("sample-project full session integration", () => {
-	it("#given sample-project fixture #when running full session with static and dynamic injection #then each turn mutates once and preserves harness state", async () => {
+	it("#given sample-project fixture #when running full session with static and dynamic injection #then the first matching turn mutates and later turns dedup", async () => {
 		// given
 		const harness = registerExtension();
 		const cwd = projectCwd();
@@ -108,13 +108,9 @@ describe("sample-project full session integration", () => {
 		expect(appToolText).toContain("Prefer `unknown` over `any`. Use exhaustive switch checks.");
 		expect(appToolText).toContain("React components must be functional and prop-typed.");
 
-		const apiTool = expectToolResult(apiToolResult);
-		const apiToolText = textContent(apiTool);
-		expect(apiTool.content).toHaveLength(2);
-		expect(apiTool.content[0]?.text).toBe(readFileSync(apiPath, "utf-8"));
-		expect(apiToolText).toContain("Additional project instructions matched for packages/api/src/index.ts");
-		expect(apiToolText).toContain("Prefer `unknown` over `any`. Use exhaustive switch checks.");
-		expect(apiToolText).not.toContain("React components must be functional and prop-typed.");
+		// typescript.md already went out on the App.tsx turn, and no rule is unique to the api file,
+		// so the api turn has nothing left to inject.
+		expect(apiToolResult).toBeUndefined();
 
 		expect(secondBeforeResult).toBeUndefined();
 		expect(harness.entries).toHaveLength(1);

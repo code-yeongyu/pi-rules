@@ -39,7 +39,7 @@ Project rules for `pi-rules` itself.
 - `before_agent_start`: return `{ systemPrompt: event.systemPrompt + block }`. NEVER mutate `event.systemPrompt` in place. Use `event.systemPromptOptions.contextFiles` to dedup against pi's native loader.
 - `tool_result`: return `{ content: [...event.content, { type: "text", text: block }] }`. NEVER mutate `event.content` in place.
 - `session_start`: reset state, but never throw.
-- All hooks are idempotent: dedup via cache keys (cwd+realPath+hash for static, toolCallId+realPath+hash for dynamic).
+- All hooks are idempotent: dedup via cache keys (cwd+realPath+hash for static, session scope+realPath+hash for dynamic).
 
 ## Performance budget
 

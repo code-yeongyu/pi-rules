@@ -15,6 +15,13 @@ type PiRulesMode = PiRulesConfig["mode"];
 
 const MODE_VALUES = new Set<string>(["static", "dynamic", "both", "off"]);
 
+/**
+ * Dedup scope for dynamic injections. A rule body is identical no matter which
+ * file matched it, so the cache key must not include the target path: scoping
+ * per path re-injects the same rule once per distinct file read in a session.
+ */
+const DYNAMIC_SCOPE = "session";
+
 export default function piRulesExtension(pi: ExtensionAPI): void {
 	pi.registerFlag("pi-rules-disabled", {
 		type: "boolean",
@@ -132,7 +139,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		);
 		engine.commitDynamicTargetFingerprints(fingerprints);
 		const rules = loaded.rules.filter(
-			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(firstTargetPath, rule),
+			(rule) => !engine.isStaticInjected(rule) && !engine.isDynamicInjected(DYNAMIC_SCOPE, rule),
 		);
 		if (rules.length === 0) {
 			return undefined;
@@ -141,7 +148,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		const firstPendingTarget = pendingFingerprints[0]?.targetPath ?? firstTargetPath;
 		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstPendingTarget));
 		for (const rule of rules) {
-			engine.markDynamicInjected(firstTargetPath, rule);
+			engine.markDynamicInjected(DYNAMIC_SCOPE, rule);
 		}
 
 		return { content: [...event.content, { type: "text", text: block }] };

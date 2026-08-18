@@ -274,6 +274,19 @@ describe("tool_result integration", () => {
 		expect(secondResult).toBeUndefined();
 	});
 
+	it("#given two different files matched by the same rule #when both read #then rule injects once (session-scoped dedup)", async () => {
+		// given
+		const { harness, ctx } = await createStartedHarness();
+
+		// when
+		const firstResult = await harness.emit("tool_result", readToolResult(APP_FILE_PATH, "a"), ctx);
+		const secondResult = await harness.emit("tool_result", readToolResult(API_FILE_PATH, "b"), ctx);
+
+		// then
+		expect(injectedText(firstResult)).toContain("Additional project instructions matched for");
+		expect(secondResult).toBeUndefined();
+	});
+
 	it("#given dynamic rule injected before compaction #when session_compact then same file read #then rule injects again", async () => {
 		// given
 		const { harness, ctx } = await createStartedHarness();
