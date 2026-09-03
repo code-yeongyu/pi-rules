@@ -22,7 +22,7 @@ vi.mock("node:fs", async (importOriginal) => {
 
 import { realpathSync } from "node:fs";
 
-import { findProjectRoot } from "../src/rules/project-root.js";
+import { findProjectRoot, widenToRepositoryRoot } from "../src/rules/project-root.js";
 import { createTempFs } from "./helpers/temp-fs.js";
 
 function canonicalPath(path: string): string {
@@ -262,5 +262,65 @@ describe("findProjectRoot", () => {
 		} finally {
 			tempFs.cleanup();
 		}
+	});
+});
+
+describe("widenToRepositoryRoot", () => {
+	it("#given project root with no .git above #when widening #then project root is returned unchanged", () => {
+		// given
+		const tempFs = createTempFs();
+		const projectRoot = tempFs.mkdir("project");
+
+		try {
+			// when
+			const result = widenToRepositoryRoot(projectRoot);
+
+			// then
+			expect(result).toBe(projectRoot);
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given project root is the repository root itself #when widening #then project root is returned unchanged", () => {
+		// given
+		const tempFs = createTempFs();
+		const projectRoot = tempFs.mkdir("repo");
+		tempFs.mkdir("repo/.git");
+
+		try {
+			// when
+			const result = widenToRepositoryRoot(projectRoot);
+
+			// then
+			expect(result).toBe(projectRoot);
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given nested workspace member inside a git repository #when widening #then repository root is returned", () => {
+		// given
+		const tempFs = createTempFs();
+		const repositoryRoot = tempFs.mkdir("repo");
+		tempFs.mkdir("repo/.git");
+		tempFs.write("repo/backend/Cargo.toml", "");
+		const memberRoot = tempFs.mkdir("repo/backend/crates/member");
+		tempFs.write("repo/backend/crates/member/Cargo.toml", "");
+
+		try {
+			// when
+			const result = widenToRepositoryRoot(memberRoot);
+
+			// then
+			expect(result).toBe(canonicalPath(repositoryRoot));
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given null project root #when widening #then null is returned", () => {
+		// given / when / then
+		expect(widenToRepositoryRoot(null)).toBe(null);
 	});
 });
