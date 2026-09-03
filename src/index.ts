@@ -51,6 +51,14 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 	 */
 	const nativeContextPaths = new Set<string>();
 
+	/**
+	 * Realpaths of single-file rules (AGENTS.md/CLAUDE.md) already injected dynamically in
+	 * this session. Single-file rules match every target, so without session-level dedup
+	 * each newly read file would re-inject the same context document. Cleared on session
+	 * start and compaction together with the engine session state.
+	 */
+	const injectedSingleFileRules = new Set<string>();
+
 	function syncConfigFromFlags(): void {
 		const disabled = pi.getFlag("pi-rules-disabled");
 		const mode = pi.getFlag("pi-rules-mode");
@@ -68,6 +76,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 	pi.on("session_start", async (event, ctx) => {
 		syncConfigFromFlags();
 		engine.resetSession(ctx.cwd);
+		injectedSingleFileRules.clear();
 		if (engine.config.disabled) {
 			return undefined;
 		}
@@ -78,6 +87,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 
 	pi.on("session_compact", async (_event, ctx) => {
 		engine.resetSession(ctx.cwd);
+		injectedSingleFileRules.clear();
 		pi.appendEntry("pi-rules.scan", { cwd: ctx.cwd, reason: "compact" });
 		return undefined;
 	});
@@ -151,7 +161,8 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 				!nativeContextPaths.has(rule.path) &&
 				!nativeContextPaths.has(rule.realPath) &&
 				!engine.isStaticInjected(rule) &&
-				!engine.isDynamicInjected(firstTargetPath, rule),
+				!engine.isDynamicInjected(firstTargetPath, rule) &&
+				!(rule.isSingleFile && injectedSingleFileRules.has(rule.realPath)),
 		);
 		if (rules.length === 0) {
 			return undefined;
@@ -161,6 +172,9 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		const block = engine.formatDynamic(rules, displayPath(ctx.cwd, firstPendingTarget));
 		for (const rule of rules) {
 			engine.markDynamicInjected(firstTargetPath, rule);
+			if (rule.isSingleFile) {
+				injectedSingleFileRules.add(rule.realPath);
+			}
 		}
 
 		return { content: [...event.content, { type: "text", text: block }] };
