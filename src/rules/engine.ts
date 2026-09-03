@@ -22,6 +22,7 @@ import { formatDynamicBlock, formatStaticBlock } from "./formatter.js";
 import { hashContent, matchRule } from "./matcher.js";
 import { sortCandidates } from "./ordering.js";
 import { parseRule } from "./parser.js";
+import { widenToRepositoryRoot } from "./project-root.js";
 import type { LoadedRule, MatchReason, PiRulesConfig, RuleCandidate, RuleDiagnostic, SessionState } from "./types.js";
 
 interface LoadedRuleContent {
@@ -162,9 +163,15 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const realPathCache: RealPathCache = new Map();
 		const rootSingleFileSelections = new Set<string>();
 		for (const targetFile of targetFiles) {
-			const projectRoot = shouldCacheLookups
-				? findProjectRootCached(projectRootCache, targetFile, deps.findProjectRoot)
-				: deps.findProjectRoot(targetFile);
+			// Cargo/pnpm workspaces nest project markers (e.g. a per-member Cargo.toml), so the
+			// marker-based root would stop the walk below workspace-level rule directories.
+			// Widen to the enclosing git repository root so rules at repository and workspace
+			// level participate; scopeRelative keeps globs keyed to the rule file's scope.
+			const projectRoot = widenToRepositoryRoot(
+				shouldCacheLookups
+					? findProjectRootCached(projectRootCache, targetFile, deps.findProjectRoot)
+					: deps.findProjectRoot(targetFile),
+			);
 			const findOptions: Parameters<EngineDeps["findCandidates"]>[0] = {
 				projectRoot,
 				targetFile,
@@ -235,10 +242,11 @@ export function createEngine(config: PiRulesConfig, deps: EngineDeps): Engine {
 		const fingerprints: DynamicTargetFingerprint[] = [];
 
 		for (const targetFile of uniqueStrings(targetPaths)) {
-			const projectRoot =
+			const projectRoot = widenToRepositoryRoot(
 				cwdProjectRoot !== null && isSameOrChildPath(targetFile, cwdProjectRoot)
 					? cwdProjectRoot
-					: deps.findProjectRoot(targetFile);
+					: deps.findProjectRoot(targetFile),
+			);
 			const findOptions: Parameters<EngineDeps["findCandidates"]>[0] = {
 				projectRoot,
 				targetFile,

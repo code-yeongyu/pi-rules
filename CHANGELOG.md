@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Monorepo / Cargo-workspace support for dynamic rule discovery: the per-target project
+  root is widened to the enclosing git repository root (`widenToRepositoryRoot`). Target
+  files inside workspace members (nested `Cargo.toml`/`package.json` markers) now discover
+  `.github/instructions/` rule directories from the workspace and repository levels as
+  well; each rule's glob semantics stay keyed to the directory owning the rule file via the
+  scopeRelative path base. Static (always-on) discovery is unchanged.
+- Native context dedup in the `tool_result` path: single-file rules (AGENTS.md/CLAUDE.md)
+  that pi already loaded natively into the system prompt are no longer re-injected per
+  matching file read when dynamic discovery walks to the repository root.
+### Added
+
 - Matcher cache reset and stats helpers for deterministic cache verification.
 
 ### Changed
