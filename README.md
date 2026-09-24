@@ -1,6 +1,6 @@
 # pi-rules
 
-[![ci](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/badge/npm-%40code--yeongyu%2Fpi--rules-red)](https://www.npmjs.com/package/@code-yeongyu/pi-rules)
+[![ci](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Rule context loader for the [pi coding agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Discovers rule files from `.pi/rules/`, `.omo/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `AGENTS.md`, `CLAUDE.md`, and injects them into the agent context.
 
@@ -34,17 +34,15 @@ The package targets the [`pi`](https://github.com/badlogic/pi-mono/tree/main/pac
 Pick whichever route fits:
 
 ```bash
-# 1. From npm (once published)
-pi install npm:@code-yeongyu/pi-rules
-
-# 2. From git (once the repository is pushed)
+# 1. From git
 pi install git:github.com/code-yeongyu/pi-rules
+senpi install git:github.com/code-yeongyu/pi-rules
 
-# 3. Manual placement (always works)
+# 2. Manual placement
 git clone https://github.com/code-yeongyu/pi-rules ~/.pi/agent/extensions/pi-rules
 cd ~/.pi/agent/extensions/pi-rules && npm install
 
-# 4. Dev / one-shot test
+# 3. Dev / one-shot test
 pi -e /path/to/pi-rules/src/index.ts
 ```
 
