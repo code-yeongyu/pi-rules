@@ -63,6 +63,17 @@ After installation, restart pi (or run `/reload` inside an interactive session).
 
 These use **walk-up stack semantics**: from the target file's directory up to the project root, rules at every level are collected. Closer directories win in precedence.
 
+**Monorepos / workspaces:** `findProjectRoot` stops at the innermost project marker, so a
+target inside a workspace member (e.g. `crates/<member>/src/*.rs`, where each member has
+its own `Cargo.toml`) would never reach workspace-level rule directories. For dynamic
+(per-target) discovery the walk is therefore widened to the innermost enclosing **git
+repository root** (`.git`): rules placed at the repository, workspace or member level all
+participate, and each rule's globs match relative to the directory that owns the rule file
+(a rule in `backend/.github/instructions/` matches `backend`-relative globs, a rule in the
+repository root's `.github/instructions/` matches repo-relative globs). A `.git` in the
+user's home directory (dotfiles repositories) is ignored. Static (session-level) discovery
+is unchanged.
+
 ### Project single-file rules
 
 | File | Style |
