@@ -5,6 +5,8 @@ const fsMock = vi.hoisted(() => ({
 	statError: null as NodeJS.ErrnoException | null,
 }));
 
+const homeMock = vi.hoisted(() => ({ path: "" }));
+
 vi.mock("node:fs", async (importOriginal) => {
 	const actual = await importOriginal<typeof import("node:fs")>();
 	return {
@@ -17,6 +19,14 @@ vi.mock("node:fs", async (importOriginal) => {
 			}
 			return actual.statSync(...args);
 		},
+	};
+});
+
+vi.mock("node:os", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("node:os")>();
+	return {
+		...actual,
+		homedir: () => (homeMock.path === "" ? actual.homedir() : homeMock.path),
 	};
 });
 
@@ -282,7 +292,7 @@ describe("widenToRepositoryRoot", () => {
 		}
 	});
 
-	it("#given project root is the repository root itself #when widening #then project root is returned unchanged", () => {
+	it("#given project root is the repository root itself #when widening #then the repository root is returned", () => {
 		// given
 		const tempFs = createTempFs();
 		const projectRoot = tempFs.mkdir("repo");
@@ -293,7 +303,7 @@ describe("widenToRepositoryRoot", () => {
 			const result = widenToRepositoryRoot(projectRoot);
 
 			// then
-			expect(result).toBe(projectRoot);
+			expect(result).toBe(canonicalPath(projectRoot));
 		} finally {
 			tempFs.cleanup();
 		}
@@ -315,6 +325,47 @@ describe("widenToRepositoryRoot", () => {
 			// then
 			expect(result).toBe(canonicalPath(repositoryRoot));
 		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given nested git repo inside a parent git repo #when widening #then innermost repository root is returned", () => {
+		// given
+		const tempFs = createTempFs();
+		const outerRoot = tempFs.mkdir("outer");
+		tempFs.mkdir("outer/.git");
+		const innerRoot = tempFs.mkdir("outer/inner");
+		tempFs.mkdir("outer/inner/.git");
+		const memberRoot = tempFs.mkdir("outer/inner/crates/member");
+
+		try {
+			// when
+			const result = widenToRepositoryRoot(memberRoot);
+
+			// then
+			expect(result).toBe(canonicalPath(innerRoot));
+			expect(result).not.toBe(canonicalPath(outerRoot));
+		} finally {
+			tempFs.cleanup();
+		}
+	});
+
+	it("#given project under a home directory that is itself a git repo #when widening #then home .git is ignored", () => {
+		// given
+		const tempFs = createTempFs();
+		const homeDirectory = tempFs.mkdir("home");
+		tempFs.mkdir("home/.git");
+		const projectRoot = tempFs.mkdir("home/project");
+		homeMock.path = homeDirectory;
+
+		try {
+			// when
+			const result = widenToRepositoryRoot(projectRoot);
+
+			// then
+			expect(result).toBe(projectRoot);
+		} finally {
+			homeMock.path = "";
 			tempFs.cleanup();
 		}
 	});

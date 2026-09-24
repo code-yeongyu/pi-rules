@@ -18,7 +18,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native context dedup in the `tool_result` path: single-file rules (AGENTS.md/CLAUDE.md)
   that pi already loaded natively into the system prompt are no longer re-injected per
   matching file read when dynamic discovery walks to the repository root.
-### Added
 
 - Matcher cache reset and stats helpers for deterministic cache verification.
 

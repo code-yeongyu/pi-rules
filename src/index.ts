@@ -100,7 +100,8 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 
 		const loaded = engine.loadStaticRules(ctx.cwd);
 		nativeContextPaths.clear();
-		for (const path of event.systemPromptOptions.contextFiles?.flatMap((contextFile) => pathKeys(contextFile.path)) ?? []) {
+		for (const path of event.systemPromptOptions.contextFiles?.flatMap((contextFile) => pathKeys(contextFile.path)) ??
+			[]) {
 			nativeContextPaths.add(path);
 		}
 		for (const rule of loaded.rules) {
@@ -153,7 +154,7 @@ export default function piRulesExtension(pi: ExtensionAPI): void {
 		engine.commitDynamicTargetFingerprints(fingerprints);
 		for (const rule of loaded.rules) {
 			if (nativeContextPaths.has(rule.path) || nativeContextPaths.has(rule.realPath)) {
-						engine.markStaticInjected(rule);
+				engine.markStaticInjected(rule);
 			}
 		}
 		const rules = loaded.rules.filter(

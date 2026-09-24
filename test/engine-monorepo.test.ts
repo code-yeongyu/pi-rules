@@ -1,11 +1,31 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import type { EngineDeps } from "../src/rules/engine.js";
 import { createEngine, defaultConfig } from "../src/rules/engine.js";
 import { findRuleCandidates } from "../src/rules/finder.js";
 import { findProjectRoot } from "../src/rules/project-root.js";
-import { createTempFs } from "./helpers/temp-fs.js";
+import { createTempFs, type TempFs } from "./helpers/temp-fs.js";
+
+function canonicalPath(path: string): string {
+	return realpathSync.native(path);
+}
+
+function createMonorepoDeps(fs: TempFs): EngineDeps {
+	const homeDir = fs.mkdir("home");
+	return {
+		findProjectRoot,
+		findCandidates: (options) => findRuleCandidates({ ...options, homeDir }),
+		readFile: (path) => {
+			try {
+				return readFileSync(path, "utf-8");
+			} catch {
+				return null;
+			}
+		},
+		extractToolPaths: () => [],
+	};
+}
 
 /**
  * Monorepo semantics: a Cargo/pnpm workspace member (nested project marker) must still
@@ -28,27 +48,15 @@ describe("loadDynamicRules (monorepo workspace)", () => {
 			fs.write("repo/backend/crates/member/Cargo.toml", "");
 			const targetPath = fs.write("repo/backend/crates/member/src/lib.rs", "pub fn f() {}\n");
 
-			const deps: EngineDeps = {
-				findProjectRoot,
-				findCandidates: findRuleCandidates,
-				readFile: (path) => {
-					try {
-						return readFileSync(path, "utf-8");
-					} catch {
-						return null;
-					}
-				},
-				extractToolPaths: () => [],
-			};
-			const engine = createEngine(defaultConfig(), deps);
+			const engine = createEngine(defaultConfig(), createMonorepoDeps(fs));
 
 			// when
 			const result = engine.loadDynamicRules(fs.path("repo"), [targetPath]);
 
 			// then
-			const paths = result.rules.map((rule) => rule.path);
-			expect(paths).toContain(rustRule);
-			expect(paths).toContain(agents);
+			const paths = result.rules.map((rule) => canonicalPath(rule.path));
+			expect(paths).toContain(canonicalPath(rustRule));
+			expect(paths).toContain(canonicalPath(agents));
 		} finally {
 			fs.cleanup();
 		}
@@ -67,25 +75,13 @@ describe("loadDynamicRules (monorepo workspace)", () => {
 			fs.write("repo/backend/crates/member/Cargo.toml", "");
 			const targetPath = fs.write("repo/backend/crates/member/src/lib.rs", "pub fn f() {}\n");
 
-			const deps: EngineDeps = {
-				findProjectRoot,
-				findCandidates: findRuleCandidates,
-				readFile: (path) => {
-					try {
-						return readFileSync(path, "utf-8");
-					} catch {
-						return null;
-					}
-				},
-				extractToolPaths: () => [],
-			};
-			const engine = createEngine(defaultConfig(), deps);
+			const engine = createEngine(defaultConfig(), createMonorepoDeps(fs));
 
 			// when
 			const result = engine.loadDynamicRules(fs.path("repo"), [targetPath]);
 
 			// then
-			expect(result.rules.map((rule) => rule.path)).toContain(rootLevelRule);
+			expect(result.rules.map((rule) => canonicalPath(rule.path))).toContain(canonicalPath(rootLevelRule));
 		} finally {
 			fs.cleanup();
 		}
@@ -104,19 +100,7 @@ describe("loadDynamicRules (monorepo workspace)", () => {
 			fs.write("repo/backend/crates/member/Cargo.toml", "");
 			const targetPath = fs.write("repo/backend/crates/member/src/lib.rs", "pub fn f() {}\n");
 
-			const deps: EngineDeps = {
-				findProjectRoot,
-				findCandidates: findRuleCandidates,
-				readFile: (path) => {
-					try {
-						return readFileSync(path, "utf-8");
-					} catch {
-						return null;
-					}
-				},
-				extractToolPaths: () => [],
-			};
-			const engine = createEngine(defaultConfig(), deps);
+			const engine = createEngine(defaultConfig(), createMonorepoDeps(fs));
 
 			// when
 			const result = engine.loadDynamicRules(fs.path("repo"), [targetPath]);

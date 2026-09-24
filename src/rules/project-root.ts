@@ -64,8 +64,8 @@ export function widenToRepositoryRoot(projectRoot: string | null): string | null
 	}
 
 	const repositoryFilesystemRoot = resolve("/");
-	const homeDirectory = resolve(homedir());
-	let currentDirectory = resolve(projectRoot);
+	const homeDirectory = resolveExistingPath(homedir());
+	let currentDirectory = resolveExistingPath(projectRoot);
 
 	while (true) {
 		if (currentDirectory === homeDirectory) {
@@ -86,5 +86,13 @@ export function widenToRepositoryRoot(projectRoot: string | null): string | null
 		}
 
 		currentDirectory = parentDirectory;
+	}
+}
+
+function resolveExistingPath(path: string): string {
+	try {
+		return realpathSync.native(resolve(path));
+	} catch {
+		return resolve(path);
 	}
 }
