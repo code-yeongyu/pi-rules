@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Docs: install from GitHub instead of npm.
+- CI: publish skips without a configured token.
+
 ## [0.2.0] - 2026-09-24
 
 ### Added
