@@ -5,7 +5,7 @@ import type { SessionStartEvent, ToolResultEvent } from "@earendil-works/pi-codi
 import { describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";
-import { createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
+import { createFakePi, type FakePiHarness, systemPromptOptions } from "../helpers/fake-pi.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_PROJECT = path.resolve(__dirname, "../fixtures/sample-project");
@@ -299,7 +299,7 @@ describe("tool_result integration", () => {
 				type: "before_agent_start",
 				prompt: "Implement the task.",
 				systemPrompt: "Base prompt.",
-				systemPromptOptions: { cwd: SAMPLE_PROJECT, contextFiles: [] },
+				systemPromptOptions: systemPromptOptions(SAMPLE_PROJECT),
 			},
 			ctx,
 		);

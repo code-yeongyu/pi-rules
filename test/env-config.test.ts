@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import piRulesExtension from "../src/index.js";
 import { TRUNCATION_NOTICE } from "../src/rules/constants.js";
-import { createFakePi, type FakePiHarness } from "./helpers/fake-pi.js";
+import { createFakePi, type FakePiHarness, systemPromptOptions } from "./helpers/fake-pi.js";
 import { createTempFs, type TempFs } from "./helpers/temp-fs.js";
 
 const ORIGINAL_HOME = process.env["HOME"];
@@ -82,7 +82,7 @@ function beforeAgentStartEvent(
 		type: "before_agent_start",
 		prompt: "Implement the task.",
 		systemPrompt: BASE_SYSTEM_PROMPT,
-		systemPromptOptions: { cwd, contextFiles },
+		systemPromptOptions: systemPromptOptions(cwd, contextFiles),
 	};
 }
 

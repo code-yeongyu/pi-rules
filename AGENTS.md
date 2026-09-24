@@ -48,7 +48,9 @@ Per-rule body cap: 12,000 chars. Total injected per tool result: 40,000 chars. C
 ## Release flow
 
 1. Update `CHANGELOG.md` `[Unreleased]` section.
-2. `npm version patch|minor|major`
+2. Bump `package.json` version (`patch` for deps-only, `minor` for features).
 3. `git push origin main --follow-tags`
-4. Create GitHub Release.
+4. Create GitHub Release (`gh release create v<version>`).
 5. CI auto-publishes to npm via OIDC trusted publishing.
+
+Dev toolchain is Bun 1.4.2 (`bun install`, `bun run check`, `bun run test`). Keep `package-lock.json` so npm consumers can `npm ci`.

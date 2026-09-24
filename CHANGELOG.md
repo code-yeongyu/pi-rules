@@ -7,29 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-24
+
 ### Added
 
+- Native `.pi/rules/` and `~/.pi/rules/` sources, matching the existing project/user-home directory pattern (fixes #11).
 - Monorepo / Cargo-workspace support for dynamic rule discovery: the per-target project
   root is widened to the enclosing git repository root (`widenToRepositoryRoot`). Target
   files inside workspace members (nested `Cargo.toml`/`package.json` markers) now discover
   `.github/instructions/` rule directories from the workspace and repository levels as
   well; each rule's glob semantics stay keyed to the directory owning the rule file via the
-  scopeRelative path base. Static (always-on) discovery is unchanged.
+  scopeRelative path base. Static (always-on) discovery is unchanged. Thanks @tradem (#31).
 - Native context dedup in the `tool_result` path: single-file rules (AGENTS.md/CLAUDE.md)
   that pi already loaded natively into the system prompt are no longer re-injected per
   matching file read when dynamic discovery walks to the repository root.
-
 - Matcher cache reset and stats helpers for deterministic cache verification.
 
 ### Changed
 
+- Dev and CI toolchain is Bun 1.4.2 (`bun install --frozen-lockfile`, `bun run check`, `bun run test`) with an `npm-consumer` job (`npm ci && npm test`). Actions use `actions/checkout@v7`, `actions/setup-node@v7`, and `oven-sh/setup-bun@v2`.
+- Peer dependencies are `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` at `*` (never `^0.87`). Tests pin those packages at `0.87.1`. `typebox` is a devDependency, not a peer.
+- Exact devDependency pins: `@biomejs/biome` 2.5.14, `vitest` 5.0.1, `typescript` 7.0.2, `@types/node` 26.6.2, `@typescript/native-preview` 7.0.0-dev.20260707.2.
+- `picomatch` 4.0.7 (from 4.0.5 resolved).
 - Glob matching now reuses a bounded compiled matcher cache instead of recompiling picomatch patterns for every file.
 - Dynamic rule loading now deduplicates repeated target paths and rule-file parsing work.
 
 ### Fixed
 
 - Documented `PI_RULES_DISABLED`, `PI_RULES_MAX_RULE_CHARS`, and `PI_RULES_MAX_RESULT_CHARS` environment variables are now read at extension registration; previously nothing in `src/` consulted `process.env`, so setting them had no effect.
-- `findProjectRoot` no longer loops forever when the target path is on a different Windows drive than the process cwd (or on a UNC share): the walk now stops when `dirname()` stops progressing instead of only at `resolve("/")`. The infinite synchronous loop froze the host agent's event loop at 100% CPU on every `read`/`edit`/`write` tool result for such paths.
+- `findProjectRoot` no longer loops forever when the target path is on a different Windows drive than the process cwd (or on a UNC share): the walk now stops when `dirname()` stops progressing instead of only at `resolve("/")`. Thanks @lavi-kj (#19).
 - Dynamic rule injection now dedupes by rule across the session instead of per tool call, preventing repeated nested `AGENTS.md`/`CLAUDE.md` instruction blocks on subsequent reads.
 - Dynamic injection now skips rules already injected statically or already loaded by pi's native context loader.
 - Dynamic rule loading now preserves each target file's project root so nested projects load their nearest rules correctly.

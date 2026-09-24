@@ -3,11 +3,29 @@ import type {
 	ExtensionCommandContext,
 	ExtensionContext,
 	ExtensionHandler,
+	NormalizedBuildSystemPromptOptions,
 	RegisteredCommand,
 	ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
 import { createEventBus } from "@earendil-works/pi-coding-agent";
 import type { TSchema } from "typebox";
+
+export function systemPromptOptions(
+	cwd: string,
+	contextFiles: Array<{ path: string; content: string }> = [],
+): NormalizedBuildSystemPromptOptions {
+	return {
+		cwd,
+		selectedTools: [],
+		toolSnippets: {},
+		toolGuidelines: {},
+		promptGuidelines: [],
+		appendSystemPrompt: "",
+		sections: {},
+		contextFiles,
+		skills: [],
+	};
+}
 
 export interface CapturedTool {
 	definition: ToolDefinition<TSchema, unknown, never>;
@@ -92,6 +110,7 @@ export function createFakePi(): FakePiHarness {
 
 	const on = ((event: string, handler: ExtensionHandler<never, unknown>) => {
 		handlers.push({ event, handler: handler as ExtensionHandler<unknown, unknown> });
+		return () => {};
 	}) as ExtensionAPI["on"];
 	const registerTool: ExtensionAPI["registerTool"] = (definition) => {
 		tools.push({ definition: definition as ToolDefinition<TSchema, unknown, never> });
@@ -108,6 +127,7 @@ export function createFakePi(): FakePiHarness {
 	};
 	const getFlag: ExtensionAPI["getFlag"] = (name) => flagValues.get(name);
 	const registerMessageRenderer: ExtensionAPI["registerMessageRenderer"] = () => {};
+	const registerMarkdownTransformer: ExtensionAPI["registerMarkdownTransformer"] = () => {};
 	const registerEntryRenderer: ExtensionAPI["registerEntryRenderer"] = () => {};
 	const sendMessage: ExtensionAPI["sendMessage"] = () => {};
 	const sendUserMessage: ExtensionAPI["sendUserMessage"] = () => {};
@@ -141,6 +161,7 @@ export function createFakePi(): FakePiHarness {
 		registerFlag,
 		getFlag,
 		registerMessageRenderer,
+		registerMarkdownTransformer,
 		registerEntryRenderer,
 		sendMessage,
 		sendUserMessage,
@@ -201,6 +222,7 @@ export function createFakePi(): FakePiHarness {
 			sessionManager: { listSessions: () => [], getSession: () => undefined },
 			modelRegistry: { listModels: () => [], getModel: () => undefined },
 			model: undefined,
+			scopedModels: [],
 			thinkingLevel: "medium",
 			isIdle: () => true,
 			signal: undefined,

@@ -5,7 +5,7 @@ import type { BeforeAgentStartEvent, SessionStartEvent } from "@earendil-works/p
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";
-import { createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
+import { createFakePi, type FakePiHarness, systemPromptOptions } from "../helpers/fake-pi.js";
 import { createTempFs, type TempFs } from "../helpers/temp-fs.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -59,7 +59,7 @@ function beforeAgentStartEvent(
 		type: "before_agent_start",
 		prompt: "Implement the task.",
 		systemPrompt: BASE_SYSTEM_PROMPT,
-		systemPromptOptions: { cwd, contextFiles },
+		systemPromptOptions: systemPromptOptions(cwd, contextFiles),
 	};
 }
 
@@ -225,5 +225,21 @@ describe("before_agent_start integration", () => {
 
 		// then
 		expect(result).toBeUndefined();
+	});
+
+	it("#given project with alwaysApply .pi/rules file #when before_agent_start emitted #then pi-native rule is injected", async () => {
+		// given
+		const project = createProjectTempFs();
+		project.write(".pi/rules/core.md", "---\nalwaysApply: true\n---\nPi-native project rule.\n");
+		const cwd = projectCwd(project.root);
+		const harness = registerExtension();
+
+		// when
+		const result = await harness.emit("before_agent_start", beforeAgentStartEvent(cwd), harness.makeCtx({ cwd }));
+
+		// then
+		const returnedEvent = expectBeforeAgentStartResult(result);
+		expect(returnedEvent.systemPrompt).toContain(".pi/rules/core.md");
+		expect(returnedEvent.systemPrompt).toContain("Pi-native project rule.");
 	});
 });
