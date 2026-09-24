@@ -2,7 +2,7 @@
 
 [![ci](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml/badge.svg)](https://github.com/code-yeongyu/pi-rules/actions/workflows/ci.yml) [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/badge/npm-%40code--yeongyu%2Fpi--rules-red)](https://www.npmjs.com/package/@code-yeongyu/pi-rules)
 
-Rule context loader for the [pi coding agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Discovers rule files from `.omo/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `AGENTS.md`, `CLAUDE.md`, and injects them into the agent context.
+Rule context loader for the [pi coding agent](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Discovers rule files from `.pi/rules/`, `.omo/rules/`, `.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `AGENTS.md`, `CLAUDE.md`, and injects them into the agent context.
 
 ## Origin
 
@@ -56,6 +56,7 @@ After installation, restart pi (or run `/reload` inside an interactive session).
 
 | Directory | Style |
 |-----------|-------|
+| `.pi/rules/` | pi-native |
 | `.omo/rules/` | omo style |
 | `.claude/rules/` | Claude Code style |
 | `.cursor/rules/` | Cursor style |
@@ -89,6 +90,7 @@ These use **first-match-wins** at the project root: `AGENTS.md` takes priority o
 
 | Path | Type |
 |------|------|
+| `~/.pi/rules/` | directory |
 | `~/.omo/rules/` | directory |
 | `~/.opencode/rules/` | directory |
 | `~/.claude/rules/` | directory |
@@ -128,7 +130,7 @@ Rules are ordered deterministically before injection:
 
 1. **Local before global** — project rules outrank user-home rules.
 2. **Closest distance first** — rules from directories nearer to the target file take priority.
-3. **Source priority** — `.omo/rules` > `.claude/rules` > `.cursor/rules` > `.github/instructions` > `AGENTS.md` > `CLAUDE.md` > `CONTEXT.md` > user-home variants.
+3. **Source priority** — `.pi/rules` > `.omo/rules` > `.claude/rules` > `.cursor/rules` > `.github/instructions` > `AGENTS.md` > `CLAUDE.md` > `CONTEXT.md` > user-home variants.
 4. **Lexicographic `relativePath`** — final tiebreaker for same-source, same-distance rules.
 
 Deduplication is in-memory per session by `realPath + content hash`. No filesystem persistence.
@@ -178,7 +180,7 @@ Rule files are prompt and context input. Do NOT load untrusted repositories. All
 
 | Symptom | Fix |
 |---------|-----|
-| No rules loaded | Verify `.omo/rules/`, `AGENTS.md`, etc. exist in the project root or ancestors. Run `/rules` to inspect. |
+| No rules loaded | Verify `.pi/rules/`, `.omo/rules/`, `AGENTS.md`, etc. exist in the project root or ancestors. Run `/rules` to inspect. |
 | Rule not matching | Check frontmatter `globs` / `paths` / `applyTo`. Confirm the target file path matches the glob. |
 | Duplicate injection | Automatically deduplicated per session. Try `/reload-rules` to reset. |
 | Extension not loaded | Confirm `pi.extensions` in your `package.json` or use `pi -e ./src/index.ts` for one-shot. |
@@ -190,11 +192,12 @@ Rule files are prompt and context input. Do NOT load untrusted repositories. All
 ```bash
 git clone https://github.com/code-yeongyu/pi-rules
 cd pi-rules
-npm install            # install dev + peer deps
-npm test               # 229 unit tests
-npm run test:integration  # 43 integration tests
-npm run typecheck      # tsc --noEmit
-npm run check          # tsc + biome
+bun install            # install dev + peer deps (Bun 1.4.2)
+bun run test           # unit tests
+bun run test:integration
+bun run check          # tsgo + biome
+# npm consumers:
+npm ci && npm test
 pi -e ./src/index.ts   # smoke-test inside a real pi session
 ```
 

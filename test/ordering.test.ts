@@ -36,6 +36,24 @@ describe("sortCandidates", () => {
 		expect(result).toEqual([closeRule, middleRule, farRule]);
 	});
 
+	it("#given same distance different sources #when sorting #then .pi/rules before .omo/rules", () => {
+		// given
+		const omoRule = makeRuleCandidate({
+			source: ".omo/rules",
+			relativePath: ".omo/rules/typescript.md",
+		});
+		const piRule = makeRuleCandidate({
+			source: ".pi/rules",
+			relativePath: ".pi/rules/typescript.md",
+		});
+
+		// when
+		const result = sortCandidates([omoRule, piRule]);
+
+		// then
+		expect(result).toEqual([piRule, omoRule]);
+	});
+
 	it("#given same distance different sources #when sorting #then .omo/rules before .claude/rules", () => {
 		// given
 		const claudeRule = makeRuleCandidate({ source: ".claude/rules", relativePath: ".claude/rules/typescript.md" });

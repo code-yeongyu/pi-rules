@@ -6,7 +6,7 @@ import type { BeforeAgentStartEvent, SessionStartEvent, ToolResultEvent } from "
 import { describe, expect, it } from "vitest";
 
 import piRulesExtension from "../../src/index.js";
-import { createFakePi, type FakePiHarness } from "../helpers/fake-pi.js";
+import { createFakePi, type FakePiHarness, systemPromptOptions } from "../helpers/fake-pi.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SAMPLE_PROJECT = path.resolve(__dirname, "../fixtures/sample-project");
@@ -43,7 +43,7 @@ function beforeAgentStartEvent(cwd: string): BeforeAgentStartEvent {
 		type: "before_agent_start",
 		prompt: "Implement the task.",
 		systemPrompt: BASE_SYSTEM_PROMPT,
-		systemPromptOptions: { cwd, contextFiles: [] },
+		systemPromptOptions: systemPromptOptions(cwd),
 	};
 }
 

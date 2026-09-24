@@ -39,6 +39,27 @@ describe("findRuleCandidates", () => {
 		return candidate;
 	};
 
+	it('#given project with .pi/rules/core.md #when finding from project root #then candidate has source ".pi/rules" and distance 0', () => {
+		// given
+		const tempFileSystem = createTrackedTempFs();
+		const projectRoot = tempFileSystem.mkdir("repo");
+		const rulePath = tempFileSystem.write("repo/.pi/rules/core.md", "Pi-native rule.");
+
+		// when
+		const result = findRuleCandidates({ projectRoot, targetFile: null, homeDir: tempFileSystem.path("home") });
+
+		// then
+		expect(result).toContainEqual({
+			path: rulePath,
+			realPath: realpathSync.native(rulePath),
+			source: ".pi/rules",
+			distance: 0,
+			isGlobal: false,
+			isSingleFile: false,
+			relativePath: ".pi/rules/core.md",
+		});
+	});
+
 	it('#given project with .omo/rules/core.md #when finding from project root #then candidate has source ".omo/rules" and distance 0', () => {
 		// given
 		const tempFileSystem = createTrackedTempFs();
@@ -170,6 +191,27 @@ describe("findRuleCandidates", () => {
 			path: rulePath,
 			isSingleFile: true,
 			relativePath: ".github/copilot-instructions.md",
+		});
+	});
+
+	it("#given user home with ~/.pi/rules/global.md #when finding with homeDir override #then candidate has source ~/.pi/rules and isGlobal true", () => {
+		// given
+		const tempFileSystem = createTrackedTempFs();
+		const homeDir = tempFileSystem.mkdir("home");
+		const rulePath = tempFileSystem.write("home/.pi/rules/global.md", "Pi global rule.");
+
+		// when
+		const result = findRuleCandidates({ projectRoot: null, targetFile: null, homeDir });
+
+		// then
+		expect(result).toContainEqual({
+			path: rulePath,
+			realPath: realpathSync.native(rulePath),
+			source: "~/.pi/rules",
+			distance: GLOBAL_DISTANCE,
+			isGlobal: true,
+			isSingleFile: false,
+			relativePath: ".pi/rules/global.md",
 		});
 	});
 
