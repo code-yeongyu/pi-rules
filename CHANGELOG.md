@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Docs: install from GitHub instead of npm.
 - CI: publish skips without a configured token.
+- Dev dependencies: `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` 1.0.2 for tests (from 0.87.1), `@biomejs/biome` 2.5.15, `@types/node` 26.6.4, `vitest` 5.0.3.
+- `package-lock.json` is now the only lockfile. `bun.lock` is removed and gitignored; Bun installs from `package-lock.json`, so Dependabot updates can no longer leave a second lockfile stale.
 
 ## [0.2.0] - 2026-09-24
 

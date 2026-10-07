@@ -190,7 +190,7 @@ Rule files are prompt and context input. Do NOT load untrusted repositories. All
 ```bash
 git clone https://github.com/code-yeongyu/pi-rules
 cd pi-rules
-bun install            # install dev + peer deps (Bun 1.4.2)
+bun install            # install dev + peer deps from package-lock.json (Bun 1.4.2)
 bun run test           # unit tests
 bun run test:integration
 bun run check          # tsgo + biome

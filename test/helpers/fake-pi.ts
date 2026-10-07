@@ -179,6 +179,13 @@ export function createFakePi(): FakePiHarness {
 		setThinkingLevel,
 		registerProvider,
 		unregisterProvider,
+		registerToolRenderer: () => {},
+		getSettings: (() => ({})) as ExtensionAPI["getSettings"],
+		registerMcpServer: () => {},
+		unregisterMcpServer: () => {},
+		getMcpServers: (() => []) as unknown as ExtensionAPI["getMcpServers"],
+		registerVirtualModel: () => {},
+		unregisterVirtualModel: () => {},
 		events: createEventBus(),
 	} satisfies ExtensionAPI;
 

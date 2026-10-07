@@ -39,6 +39,8 @@ jobs:
         with:
           bun-version: 1.4.2
 
+      # package-lock.json is the only lockfile. Bun installs from it, and
+      # --frozen-lockfile fails when it is out of date with package.json.
       - name: Install dependencies
         run: bun install --frozen-lockfile
 

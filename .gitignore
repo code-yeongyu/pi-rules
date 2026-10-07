@@ -1,4 +1,7 @@
 node_modules/
+# package-lock.json is the only lockfile; bun installs from it (see AGENTS.md)
+bun.lock
+bun.lockb
 dist/
 coverage/
 *.log

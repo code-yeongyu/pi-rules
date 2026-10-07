@@ -14,6 +14,8 @@ npm pack --dry-run          # release sanity
 
 `npm ci && npm test` remains the consumer smoke (extension hosts install with npm).
 
+`package-lock.json` is the only lockfile; `bun install` reads it and `bun.lock` is gitignored. To change a dependency, run `npm install <pkg>@<version>` and commit the updated `package-lock.json`.
+
 If you change rule discovery, precedence, injection format, or TUI behavior, also update `README.md` and add tests.
 
 Tests follow `#given X #when Y #then Z` naming with `// given / // when / // then` body comments.
