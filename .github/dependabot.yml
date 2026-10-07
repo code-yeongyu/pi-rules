@@ -1,5 +1,7 @@
 version: 2
 updates:
+  # Updates package.json and package-lock.json, the only lockfile. CI and
+  # bun-based installs read package-lock.json, so nothing else can drift.
   - package-ecosystem: npm
     directory: /
     schedule:

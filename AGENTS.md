@@ -53,4 +53,4 @@ Per-rule body cap: 12,000 chars. Total injected per tool result: 40,000 chars. C
 4. Create GitHub Release (`gh release create v<version>`).
 5. CI auto-publishes to npm via OIDC trusted publishing.
 
-Dev toolchain is Bun 1.4.2 (`bun install`, `bun run check`, `bun run test`). Keep `package-lock.json` so npm consumers can `npm ci`.
+Dev toolchain is Bun 1.4.2 (`bun install`, `bun run check`, `bun run test`). `package-lock.json` is the only lockfile: npm consumers `npm ci` from it, and Bun installs from it too (`bun install --frozen-lockfile` fails when it is out of date). `bun.lock` is gitignored; never commit one. Change dependencies with `npm install <pkg>@<version>` so `package-lock.json` is regenerated.
